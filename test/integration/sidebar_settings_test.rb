@@ -63,19 +63,18 @@ class SidebarSettingsIntegrationTest < Redmine::IntegrationTest
     }
     assert_redirected_to '/sidebar_settings'
     assert_equal(
-      [{'page' => '*', 'action' => 'hide', 'target' => {'heading' => 'Help'}}],
+      [{'page' => '*', 'action' => 'hide', 'target' => {'kind' => 'section', 'heading' => 'Help'}}],
       RedmineSidebarSettings::Config.parse(Setting.plugin_redmine_sidebar_settings['rules_json'])
     )
   end
 
   test 'invalid rules are rejected and stored config stays intact' do
-    Setting.plugin_redmine_sidebar_settings = {
-      'rules_json' => '[{"page":"*","action":"hide","target":{"heading":"Help"}}]'
-    }
+    original = '[{"page":"*","action":"hide","target":{"heading":"Help"}}]'
+    Setting.plugin_redmine_sidebar_settings = {'rules_json' => original}
     log_user('admin', 'admin')
     post '/sidebar_settings/update', params: {rules_json: '[{]'}
     assert_response :unprocessable_entity
-    assert_equal '[]', Setting.plugin_redmine_sidebar_settings['rules_json']
+    assert_equal original, Setting.plugin_redmine_sidebar_settings['rules_json']
   end
 
   test 'rules are delivered to matching pages' do
