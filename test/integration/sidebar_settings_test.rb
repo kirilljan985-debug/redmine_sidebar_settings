@@ -86,7 +86,7 @@ class SidebarSettingsIntegrationTest < Redmine::IntegrationTest
     get '/issues'
     assert_response :success
     assert_match %r{window\.RedmineSidebarSettings}, response.body
-    assert_match %r{plugin_assets/redmine_sidebar_settings/sidebar_settings\.js}, response.body
+    assert_match %r{plugin_assets/redmine_sidebar_settings/sidebar_settings[^"]*\.js}, response.body
   end
 
   test 'pages stay native when config is empty' do

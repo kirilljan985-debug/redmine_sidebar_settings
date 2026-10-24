@@ -60,6 +60,10 @@ jobs:
               for line in text.splitlines():
                   if re.match(r'^(Failure|Error|# |[A-Z]\w+Test#|Expected|\d+ runs,)', line):
                       out.append(line[:180])
+              idx = text.find('Failure:')
+              if idx != -1:
+                  end = text.find('Finished in', idx)
+                  out.append("FULL-FAILURES:\n" + text[idx:end if end != -1 else idx+2600][:2600])
           except Exception as e:
               out.append(f"no test output: {e}")
           try:
