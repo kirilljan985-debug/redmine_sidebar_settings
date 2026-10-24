@@ -3,6 +3,12 @@ require File.expand_path('../../test_helper', __FILE__)
 class SidebarSettingsIntegrationTest < Redmine::IntegrationTest
   fixtures :all
 
+  setup do
+    # Redmine renders 500 pages in the test env (show_exceptions = :all);
+    # raise instead so failures show the real exception and backtrace.
+    Rails.application.env_config['action_dispatch.show_exceptions'] = false
+  end
+
   test 'admin opens the settings page' do
     log_user('admin', 'admin')
     get '/sidebar_settings'
