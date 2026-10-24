@@ -1,0 +1,6 @@
+<% rules = RedmineSidebarSettings.rules_for(controller_name, action_name) %>
+<% unless rules.empty? %>
+<%= stylesheet_link_tag 'sidebar_settings', plugin: 'redmine_sidebar_settings' %>
+<%= javascript_include_tag 'sidebar_settings', plugin: 'redmine_sidebar_settings' %>
+<%= javascript_tag "window.RedmineSidebarSettings = #{rules.to_json};" %>
+<% end %>
