@@ -28,6 +28,16 @@ class SidebarSettingsIntegrationTest < Redmine::IntegrationTest
     assert_response :redirect
   end
 
+  test 'sanity: core pages render without the plugin involved' do
+    get '/'
+    assert_response :success
+    log_user('admin', 'admin')
+    get '/'
+    assert_response :success
+    get '/login'
+    assert_response :success
+  end
+
   test 'admin saves valid rules' do
     log_user('admin', 'admin')
     post '/sidebar_settings/update', params: {
