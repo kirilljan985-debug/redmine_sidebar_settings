@@ -21,7 +21,7 @@
   <p><%= submit_tag l(:button_save) %></p>
 <% end %>
 
-<script id="rss-i18n" type="application/json"><%= {
+<script id="rss-i18n" type="application/json"><%= raw({
   page: l(:rss_page),
   action: l(:rss_action),
   kind: l(:rss_target_kind),
@@ -39,7 +39,7 @@
   up: l(:rss_move_up),
   down: l(:rss_move_down),
   remove: l(:rss_remove)
-}.to_json %></script>
+}.to_json) %></script>
 
 <% content_for :header_tags do %>
   <%= stylesheet_link_tag 'sidebar_settings_admin', plugin: 'redmine_sidebar_settings' %>

@@ -11,8 +11,22 @@
   var addBtn = document.getElementById('rss-add');
   if (!form || !rowsEl || !jsonEl || !i18nEl || !addBtn) { return; }
 
-  var T;
-  try { T = JSON.parse(i18nEl.textContent); } catch (e) { return; }
+  /* English defaults keep the editor working even if the i18n payload
+     cannot be parsed; server labels override them below. */
+  var T = {
+    page: 'Page', action: 'Action', kind: 'Target',
+    section: 'Section heading', item: 'Link', css: 'CSS selector',
+    target_section: 'Section heading (exact text)', target_item: 'Link path or prefix',
+    target_css: 'CSS selector', rename: 'Rename', hide: 'Hide', move: 'Move',
+    value: 'New title', index: 'Position (0 = first)',
+    up: 'Move rule up', down: 'Move rule down', remove: 'Delete rule'
+  };
+  try {
+    var labels = JSON.parse(i18nEl.textContent);
+    for (var key in labels) {
+      if (Object.prototype.hasOwnProperty.call(labels, key)) { T[key] = labels[key]; }
+    }
+  } catch (e) { /* fall back to the defaults above */ }
 
   var ACTIONS = [['rename', T.rename], ['hide', T.hide], ['move', T.move]];
   var KINDS = [['section', T.section], ['item', T.item], ['css', T.css]];
