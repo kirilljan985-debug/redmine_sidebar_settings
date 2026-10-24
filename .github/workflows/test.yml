@@ -63,8 +63,8 @@ jobs:
           try:
               text = open('redmine/log/test.log','rb').read().decode('utf-8','replace')
               idx = text.rfind('Completed 500')
-              block = text[idx:idx+3000] if idx != -1 else text[-3000:]
-              out.append("TEST.LOG 500-BLOCK:\n" + block)
+              block = text[max(0,idx-2600):idx+500] if idx != -1 else text[-3000:]
+              out.append("TEST.LOG 500-CONTEXT:\n" + block)
           except Exception as e:
               out.append(f"no test.log: {e}")
           print(urllib.parse.quote("\n====\n".join(out))[:6000])
