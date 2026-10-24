@@ -46,7 +46,7 @@ class SidebarSettingsIntegrationTest < Redmine::IntegrationTest
     h2 = b.index('<h2')
     pre = b.index('<pre')
     note = "status=#{response.status}; SHOWEX=#{ex.inspect}; " \
-           "H2=#{h2 ? b[h2, 500] : 'none'}; PRE=#{pre ? b[pre, 1400] : 'none'}"
+           "H2=#{h2 ? b[h2, 240] : 'none'}; PRE=#{pre ? b[pre, 900] : 'none'}"
     assert_response :success, note
   end
 

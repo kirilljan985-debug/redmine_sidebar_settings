@@ -53,26 +53,22 @@ jobs:
         if: failure()
         run: |
           python3 - <<'PY' > /tmp/failure_report.txt
-          import urllib.parse
+          import urllib.parse, re
           out = []
           try:
               text = open('/tmp/test_output.log','rb').read().decode('utf-8','replace')
-              out.append(text[-3500:])
+              for line in text.splitlines():
+                  if re.match(r'^(Failure|Error|# |[A-Z]\w+Test#|Expected|\d+ runs,)', line):
+                      out.append(line[:180])
           except Exception as e:
               out.append(f"no test output: {e}")
           try:
               text = open('redmine/log/test.log','rb').read().decode('utf-8','replace')
-              lines = text.splitlines()
-              keep = [l for l in lines if not any(s in l for s in ('SELECT','Setting Load','↳','CACHE','EXISTS','Loading fixture'))]
-              idx = None
-              for i in range(len(keep)-1, -1, -1):
-                  if 'Completed 500' in keep[i]:
-                      idx = i
-                      break
-              block = '\n'.join(keep[max(0,idx-40):idx+8]) if idx is not None else '\n'.join(keep[-40:])
-              out.append("TEST.LOG 500-CONTEXT:\n" + block[:2800])
+              lines = [l for l in text.splitlines() if not any(s in l for s in ('SELECT','Setting Load','TRANSACTION','CACHE','Loading fixture','↳'))]
+              hits = [l for l in lines if 'Error' in l or 'error' in l]
+              out.append("LOG-ERROR-LINES: " + " || ".join(h[-200:] for h in hits[-6:]))
           except Exception as e:
               out.append(f"no test.log: {e}")
-          print(urllib.parse.quote("\n====\n".join(out))[:6000])
+          print(urllib.parse.quote("\n".join(out))[:6000])
           PY
           echo "::error::$(cat /tmp/failure_report.txt)"
