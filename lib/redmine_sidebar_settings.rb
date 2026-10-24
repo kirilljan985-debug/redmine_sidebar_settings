@@ -2,51 +2,34 @@
 
 require 'json'
 
-# Root module of the redmine_sidebar_settings plugin.
+# Root module of the redmine_sidebar_settings plugin ("Настройки меню").
 #
-# The plugin customizes the sidebar display only: rules are resolved
-# server-side per page and applied to the DOM by the client engine
-# (assets/javascripts/sidebar_settings.js). Nothing is removed from the
-# DOM and no links or permissions are touched.
+# Manages the Redmine application menu (:top_menu) display: rename, hide and
+# reorder menu items. Everything happens server-side inside
+# Redmine::MenuManager, so every layout and theme (including ModernLayout)
+# renders the configured menu. Routes, permissions and pages are never
+# touched: a hidden item stays reachable by its direct URL, and it can be
+# restored from the same settings page.
 module RedmineSidebarSettings
-  # Known sidebar pages with sample URLs (admin UI suggestions).
-  PAGE_CATALOG = [
-    ['*', '/'],
-    ['issues/index', '/issues'],
-    ['issues/show', '/issues/1'],
-    ['projects/show', '/projects/demo'],
-    ['wiki/show', '/projects/demo/wiki'],
-    ['activity/index', '/activity'],
-    ['news/index', '/news'],
-    ['documents/index', '/documents'],
-    ['files/index', '/projects/demo/files'],
-    ['search/index', '/search'],
-    ['calendar/show', '/projects/demo/issues/calendar'],
-    ['gantt/show', '/projects/demo/issues/gantt'],
-    ['welcome/index', '/']
-  ].freeze
+  # The only menu managed by the plugin.
+  MENU = :top_menu
 
   module_function
 
-  def rules_json
-    value = (Setting.plugin_redmine_sidebar_settings || {})['rules_json']
+  def menu_json
+    value = (Setting.plugin_redmine_sidebar_settings || {})['menu_json']
     value.to_s
   end
 
-  # Parsed rules; a broken config yields [] instead of raising -
-  # a bad setting must never break page rendering.
-  def rules
-    Config.parse(rules_json)
+  # Parsed config; a broken stored config yields the empty one instead of
+  # raising - a bad setting must never break menu rendering.
+  def menu_config
+    Config.parse(menu_json)
   rescue ValidationError
-    []
+    Config::EMPTY
   end
 
-  # Rules applicable to the given page, ordered from generic to specific.
-  def rules_for(controller_name, action_name)
-    Resolver.for_page(rules, controller_name, action_name)
-  end
-
-  def save_rules!(normalized_rules)
-    Setting.plugin_redmine_sidebar_settings = {'rules_json' => JSON.generate(normalized_rules)}
+  def save_menu_config!(normalized)
+    Setting.plugin_redmine_sidebar_settings = {'menu_json' => JSON.generate(normalized)}
   end
 end

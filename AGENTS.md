@@ -1,75 +1,65 @@
-# AGENTS.md — память проекта redmine_sidebar_settings
+# AGENTS.md — память проекта redmine_sidebar_settings («Настройки меню»)
 
-Правила работы, грабли и текущий статус. Живой план — в `PLAN.md`.
+Правила работы, грабли и статус. Живой план — `PLAN.md`.
 
-## Суть плагина
+## Суть плагина (v2.0)
 
-Display-only настройка сайдбара Redmine 7+: переименовать / скрыть / переставить
-секции и ссылки, включая пункты чужих плагинов. Ничего не удалять из DOM, не
-трогать href и права. Настройка — только в Администрировании (пункт «Сайдбар»),
-никаких живых редакторов на страницах.
+Управление прикладным меню Redmine (`:top_menu`): переименовать / скрыть /
+переставить пункты, включая добавленные чужими плагинами. Серверно, на уровне
+`Redmine::MenuManager` — поэтому подхватывается любым layout'ом (ModernLayout
+рисует это меню в своей левой панели). Только отображение: маршруты, права,
+страницы не трогаются; скрытое возвращается галочкой в тех же настройках.
 
-## Архитектура (не ломать без нужды)
+## Архитектура
 
-- `lib/redmine_sidebar_settings/` — чистая логика без Rails: `Config`
-  (валидация/нормализация), `Resolver` (отбор правил для страницы: `*` →
-  `controller/*` → `controller/action`). Юнит-тесты без Redmine.
-- Хук `view_layouts_base_html_head` (партиал
-  `app/views/hooks/redmine_sidebar_settings_head.html.erb`) отдаёт CSS+JS и
-  `window.RedmineSidebarSettings` ТОЛЬКО когда для страницы есть правила.
-- `assets/javascripts/sidebar_settings.js` — движок: rename/hide/move секций
-  (блоки = h3 + контент до следующего h3), rename/hide ссылок (матч по
-  нормализованному path+query, префикс), CSS-escape hatch. MutationObserver
-  (debounce 150ms, флаг `applying`) — для контента чужих плагинов.
-- Любая ошибка = нативный сайдбар. Битый JSON → `RedmineSidebarSettings.rules`
-  возвращает `[]` (покрыто интеграционным тестом).
+- `Config` (lib/.../config.rb) — валидация/нормализация JSON-конфига
+  `{order, renames, hidden}`. Чистая логика + юнит-тесты.
+- `MenuApplier.apply!` — применяет конфиг к `Redmine::MenuManager.map(:top_menu)`:
+  - порядок = сортировка `root.children` (имена из order, остальные после —
+    стабильно);
+  - переименование = `item.instance_variable_set(:@caption, строка)`; оригинал
+    запоминается в `MenuApplier.originals`, снятие переименования возвращает;
+  - скрытие = удаление из `root.children` c сохранением item в
+    `MenuApplier.stash` (возврат без рестарта той же галочкой).
+  - Идемпотентен; вызывается из хука `after_plugins_loaded` (после регистрации
+    меню всех плагинов, повторяется на каждом reload в dev) и при сохранении
+    в админке.
+- Админка: `SidebarSettingsController` (`require_admin`, layout 'admin') —
+  строки рендерит СЕРВЕР (class .rss-row, data-name), JS только drag&drop
+  (HTML5), стрелки и сериализация в JSON на сабмит.
 
-## Грабли (проверено по исходникам 7.0-stable)
+## Грабли (проверено)
 
-- `lib/` плагина под Zeitwerk eager load: путь файла обязан совпадать с
-  константой. Тестовая среда eager не делает — smoke check обязателен в CI
-  (`.github/workflows/test.yml`, шаг «Eager-load smoke check»).
-- В Redmine 7 `#sidebar` всегда в DOM; `#main` получает `collapsiblesidebar` /
-  `nosidebar`; нативный тумблер запоминает состояние в localStorage по паре
-  controller/action (`application-legacy.js`, `$.fn.collapsibleSidebar`).
-  Мы это НЕ трогаем.
-- `body` получает классы `controller-*`, `action-*`, `project-*` — можно
-  адресовать страницы CSS-ом.
-- Хуки регистрируются автоматически при наследовании от
-  `Redmine::Hook::ViewListener`; в `init.rb` стоит явная ссылка
-  `RedmineSidebarSettings::Hooks`, чтобы класс загрузился при старте.
-- Ассеты: `stylesheet_link_tag 'x', plugin: 'redmine_sidebar_settings'` →
-  `plugin_assets/redmine_sidebar_settings/x`.
-- Переопределений вью ядра нет и не надо (GPL + хрупкость). Только хуки.
+- Zeitwerk (плагинный lib под eager load): путь файла = константа;
+  `ValidationError` — в собственном файле `validation_error.rb`.
+- Партиалы хуков — имя файла с подчёркиванием (`_x.html.erb`), иначе
+  Missing partial → 500 на каждой странице, и Redmine 7 в тестовой среде
+  прячет исключение (`show_exceptions = :all`, DebugExceptions рисует свою
+  страницу). Диагностика: кусок `response.body` в сообщении ассерта.
+- ERB экранирует `"` внутри `<script type="application/json">` → JSON.parse
+  падает → либо `<%= raw ... .to_json %>`, либо дефолты в JS (сейчас строки
+  редактора рендерятся сервером, JS не зависит от JSON).
+- Propshaft: URL ассетов с дайджестом — в тестах матчить
+  `plugin_assets/<id>/name[^"]*\.js`.
+- `MenuItem#caption` без аргумента у top_menu: Proc.call(nil) — ок.
+- `MenuNode#children` — обычный массив: порядок менять можно напрямую,
+  `add_at`/`remove!` поддерживают `parent` и `last_items_count`.
+- Multi-worker: MenuManager in-memory — остальные worker'ы применят конфиг
+  после рестарта (хук after_plugins_loaded). Задокументировано в README.
 
 ## Правила работы
 
-1. Всё сверять по клону `../redmine-7-source` (7.0-stable), не по памяти.
-2. Перед правками смотреть `git status` — чужие незакоммиченные файлы не
-   трогать и не коммитить.
-3. Локально: `ruby -c` для .rb, `node --check` для .js, `erb -x -T- файл |
-   ruby -c` для .erb (блочная форма `<%= tag ... do %>` даёт ложную ошибку —
-   сверять с ядром). Авторитетная среда — CI.
+1. Сверять по клону `../redmine-7-source` (7.0-stable), не по памяти.
+2. `git status` перед правками; чужое не коммитить.
+3. Локально: `ruby -c`, `node --check`, `erb -x` (блочная форма даёт ложную
+   ошибку — сверять с ядром); чистая логика — standalone minitest в
+   ASCII-каталоге (кириллица в пути ломает require_relative).
 4. push с Windows — циклом `for i in {1..6}; do git push && break; sleep 10; done`.
-5. Отчёт «готово» — только после зелёного CI.
+5. «Готово» — только после зелёного CI.
 
 ## Статус
 
-- **v1.0 ГОТОВ: зелёный CI на 7.0-stable и master** (тесты + eager-load smoke).
-  Репозиторий: kirilljan985-debug/redmine_sidebar_settings.
-- Хроника грабель v1.0 (всё поймано CI, локально не воспроизводится):
-  - Партиал-хук обязан начинаться с подчёркивания:
-    `app/views/hooks/_redmine_sidebar_settings_head.html.erb`. Без него —
-    Missing partial → 500 на КАЖДОЙ странице, а Redmine 7 в тестовой среде
-    прячет исключение (`show_exceptions = :all` + DebugExceptions рисует
-    свою страницу). Диагностика: писать в assert-сообщение кусок
-    `response.body` (там страница «Exception caught» с бэктрейсом).
-  - `ValidationError` — в отдельном файле `validation_error.rb` (Zeitwerk
-    не подтягивает боковые константы до первой загрузки владельца).
-  - Propshaft отдаёт ассеты с дайджестом: в тестах матчить
-    `plugin_assets/<id>/name[^"]*\.js`, без `.js` вплотную.
-  - Краткая форма цели `{heading:}` нормализуется Config в
-    `{kind: 'section', heading:}` — это ожидаемое поведение.
-- v1.1 (план): iframe-сканер сайдбара в админке (снимок фактического состава
-  со страницы-образца, включая чужие плагины) + генерация правил из снимка.
-- v2 (идеи): экспорт/импорт конфига; шаблоны правил.
+- v2.0 (в работе): pivot сайдбар-движка → «Настройки меню». Репозиторий:
+  kirilljan985-debug/redmine_sidebar_settings.
+- История v1.0 (сайдбар-движок DOM-правил) в git-истории; грабли CI — выше.
+- Идеи v2.1: управление :account_menu, экспорт/импорт конфига, живой предпросмотр.

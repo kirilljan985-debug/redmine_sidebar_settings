@@ -1,9 +1,14 @@
 # frozen_string_literal: true
 
 module RedmineSidebarSettings
-  # Injects the plugin assets and the per-page rule set into <head>.
-  # The partial renders nothing when there are no rules for the page.
+  # Applies the stored menu configuration right after all plugins have
+  # registered their menu items (and re-applies on every code reload), so
+  # any layout or theme renders the configured menu.
   class Hooks < Redmine::Hook::ViewListener
-    render_on :view_layouts_base_html_head, partial: 'hooks/redmine_sidebar_settings_head'
+    def after_plugins_loaded(context = nil)
+      MenuApplier.apply!
+    rescue StandardError
+      # A broken config or a hostile menu state must never break boot.
+    end
   end
 end

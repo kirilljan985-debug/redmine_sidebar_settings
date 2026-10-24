@@ -1,3 +1,0 @@
-/* redmine_sidebar_settings: display-only hiding.
-   Hidden elements stay in the DOM - links remain reachable by URL. */
-#sidebar .rsb-hidden { display: none !important; }

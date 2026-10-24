@@ -1,20 +1,26 @@
 # frozen_string_literal: true
 
 module RedmineSidebarSettings
-  # Normalization and validation of the rule set stored in plugin settings.
-  # Pure logic without Rails dependencies, raises ValidationError on bad input.
+  # Normalization and validation of the menu configuration stored in plugin
+  # settings. Pure logic without Rails dependencies, raises ValidationError
+  # on bad input.
   module Config
-    ACTIONS = %w[rename hide move].freeze
-    MAX_RULES = 500
-    PAGE_PATTERN = /\A(?:\*|[\w-]+\/\*|[\w-]+\/[\w-]+)\z/
+    NAME_PATTERN = /\A[\w-]+\z/
+    MAX_ITEMS = 100
+    MAX_CAPTION = 100
+
+    EMPTY = {'order' => [].freeze, 'renames' => {}.freeze, 'hidden' => [].freeze}.freeze
 
     module_function
 
-    # Parses a JSON string into a normalized rule array.
+    # Parses a JSON string into a normalized configuration:
+    # {"order" => [names], "renames" => {name => caption}, "hidden" => [names]}
     def parse(json_string)
       raw = JSON.parse(json_string.to_s)
-      unless raw.is_a?(Array)
-        raise ValidationError, ['JSON must be an array of rules']
+      return normalize({}) if raw.is_a?(Array)
+
+      unless raw.is_a?(Hash)
+        raise ValidationError, ['JSON must be an object']
       end
 
       normalize(raw)
@@ -24,76 +30,47 @@ module RedmineSidebarSettings
 
     def normalize(raw)
       errors = []
-      rules = []
-      raw.each_with_index do |entry, idx|
-        rule = normalize_rule(entry)
-        if rule
-          rules << rule
-        else
-          errors << "rule #{idx + 1}: invalid or incomplete"
-        end
-      end
-      errors << "too many rules (limit #{MAX_RULES})" if rules.size > MAX_RULES
+      order = normalize_names(raw['order'], 'order')
+      renames = normalize_renames(raw['renames'])
+      hidden = normalize_names(raw['hidden'], 'hidden')
+
+      errors << 'order must be an array of item names' if order.nil?
+      errors << 'renames must be an object of item name => caption' if renames.nil?
+      errors << 'hidden must be an array of item names' if hidden.nil?
       raise ValidationError, errors unless errors.empty?
 
-      rules
+      {'order' => order, 'renames' => renames, 'hidden' => hidden}
     end
 
-    def normalize_rule(entry)
-      return nil unless entry.is_a?(Hash)
+    def normalize_names(value, key)
+      return [] if value.nil?
+      return nil unless value.is_a?(Array)
+      return nil if value.size > MAX_ITEMS
 
-      page = entry['page'].to_s.strip
-      action = entry['action'].to_s.strip
-      target = normalize_target(entry['target'])
-      return nil unless page.match?(PAGE_PATTERN)
-      return nil unless ACTIONS.include?(action)
-      return nil unless target
+      names = value.map do |name|
+        name = name.to_s.strip
+        return nil unless name.match?(NAME_PATTERN)
 
-      rule = {'page' => page, 'action' => action, 'target' => target}
-      case action
-      when 'rename'
-        value = entry['value'].to_s.strip
-        return nil if value.empty? || value.length > 100
-
-        rule['value'] = value
-      when 'move'
-        index = entry['index']
-        return nil unless index.is_a?(Integer) && index >= 0 && index <= 1000
-
-        rule['index'] = index
-      end
-      rule
+        name
+      end.uniq
+      names
     end
 
-    # A target is {"css" => selector} or {"kind" => "section"|"item", ...}.
-    # The explicit kind may be omitted when heading/href makes it unambiguous.
-    def normalize_target(raw)
-      return nil unless raw.is_a?(Hash)
+    def normalize_renames(value)
+      return {} if value.nil?
+      return nil unless value.is_a?(Hash)
+      return nil if value.size > MAX_ITEMS
 
-      css = raw['css'].to_s.strip
-      unless css.empty?
-        return nil if css.length > 200
+      renames = {}
+      value.each do |name, caption|
+        name = name.to_s.strip
+        caption = caption.to_s.strip
+        return nil unless name.match?(NAME_PATTERN)
+        return nil if caption.empty? || caption.length > MAX_CAPTION
 
-        return {'css' => css}
+        renames[name] = caption
       end
-
-      kind = raw['kind'].to_s.strip
-      heading = raw['heading'].to_s.strip
-      href = raw['href'].to_s.strip
-      kind = 'section' if kind.empty? && !heading.empty?
-      kind = 'item' if kind.empty? && !href.empty?
-
-      if kind == 'section'
-        return nil if heading.empty? || heading.length > 100
-
-        return {'kind' => 'section', 'heading' => heading}
-      end
-      if kind == 'item'
-        return nil if href.empty? || href.length > 200
-
-        return {'kind' => 'item', 'href' => href}
-      end
-      nil
+      renames
     end
   end
 end

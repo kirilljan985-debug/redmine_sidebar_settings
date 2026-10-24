@@ -9,12 +9,25 @@ class SidebarSettingsIntegrationTest < Redmine::IntegrationTest
     Rails.application.env_config['action_dispatch.show_exceptions'] = false
   end
 
+  teardown do
+    set_config('{"order":[],"renames":{},"hidden":[]}')
+  end
+
+  def set_config(json)
+    Setting.plugin_redmine_sidebar_settings = {'menu_json' => json}
+    RedmineSidebarSettings::MenuApplier.apply!
+  end
+
+  def menu_names
+    Redmine::MenuManager.map(RedmineSidebarSettings::MENU).menu_items.root.children.map { |c| c.name.to_s }
+  end
+
   test 'admin opens the settings page' do
     log_user('admin', 'admin')
     get '/sidebar_settings'
     assert_response :success
     assert_select 'form#rss-form'
-    assert_select '#rules_json'
+    assert_select 'div.rss-row[data-name=home]'
   end
 
   test 'logged in non-admin gets forbidden' do
@@ -28,79 +41,56 @@ class SidebarSettingsIntegrationTest < Redmine::IntegrationTest
     assert_response :redirect
   end
 
-  test 'sanity: core pages render without the plugin involved' do
-    ActionDispatch::ShowExceptions.class_eval do
-      unless method_defined?(:rsb_orig_render_exception)
-        alias_method :rsb_orig_render_exception, :render_exception
-        def render_exception(request, exception, wrapper)
-          Thread.current[:rsb_exception] = exception
-          rsb_orig_render_exception(request, exception, wrapper)
-        end
-      end
-    end
-
-    Thread.current[:rsb_exception] = nil
+  test 'core pages render' do
     get '/'
-    ex = Thread.current[:rsb_exception]
-    b = response.body
-    h2 = b.index('<h2')
-    pre = b.index('<pre')
-    note = "status=#{response.status}; SHOWEX=#{ex.inspect}; " \
-           "H2=#{h2 ? b[h2, 240] : 'none'}; PRE=#{pre ? b[pre, 900] : 'none'}"
-    assert_response :success, note
-  end
-
-  test 'sanity: logged-in core page renders' do
+    assert_response :success
     log_user('admin', 'admin')
     get '/'
-    assert_response :success, "status=#{response.status}; body=#{response.body[0, 900]}"
+    assert_response :success
   end
 
-  test 'admin saves valid rules' do
+  test 'admin saves config and the menu reflects it' do
     log_user('admin', 'admin')
     post '/sidebar_settings/update', params: {
-      rules_json: '[{"page":"*","action":"hide","target":{"heading":"Help"}}]'
+      menu_json: '{"order":["projects","home"],"renames":{"home":"Старт"},"hidden":["help"]}'
     }
     assert_redirected_to '/sidebar_settings'
-    assert_equal(
-      [{'page' => '*', 'action' => 'hide', 'target' => {'kind' => 'section', 'heading' => 'Help'}}],
-      RedmineSidebarSettings::Config.parse(Setting.plugin_redmine_sidebar_settings['rules_json'])
-    )
+
+    assert_not_includes menu_names, 'help'
+    assert_equal 'projects', menu_names.first
+    home = Redmine::MenuManager.map(RedmineSidebarSettings::MENU).menu_items.root
+                     .children.find { |c| c.name.to_s == 'home' }
+    assert_equal 'Старт', home.caption
   end
 
-  test 'invalid rules are rejected and stored config stays intact' do
-    original = '[{"page":"*","action":"hide","target":{"heading":"Help"}}]'
-    Setting.plugin_redmine_sidebar_settings = {'rules_json' => original}
+  test 'hidden item can be restored through the same settings' do
     log_user('admin', 'admin')
-    post '/sidebar_settings/update', params: {rules_json: '[{]'}
-    assert_response :unprocessable_entity
-    assert_equal original, Setting.plugin_redmine_sidebar_settings['rules_json']
-  end
-
-  test 'rules are delivered to matching pages' do
-    Setting.plugin_redmine_sidebar_settings = {
-      'rules_json' => '[{"page":"*","action":"hide","target":{"heading":"Help"}}]'
+    post '/sidebar_settings/update', params: {
+      menu_json: '{"order":[],"renames":{},"hidden":["help"]}'
     }
-    log_user('admin', 'admin')
-    get '/issues'
-    assert_response :success
-    assert_match %r{window\.RedmineSidebarSettings}, response.body
-    assert_match %r{plugin_assets/redmine_sidebar_settings/sidebar_settings[^"]*\.js}, response.body
+    assert_redirected_to '/sidebar_settings'
+    assert_not_includes menu_names, 'help'
+
+    post '/sidebar_settings/update', params: {
+      menu_json: '{"order":[],"renames":{},"hidden":[]}'
+    }
+    assert_redirected_to '/sidebar_settings'
+    assert_includes menu_names, 'help'
   end
 
-  test 'pages stay native when config is empty' do
-    Setting.plugin_redmine_sidebar_settings = {'rules_json' => '[]'}
+  test 'invalid config is rejected and stored config stays intact' do
+    original = '{"order":["home"],"renames":{},"hidden":[]}'
+    set_config(original)
     log_user('admin', 'admin')
-    get '/issues'
-    assert_response :success
-    assert_no_match %r{window\.RedmineSidebarSettings}, response.body
+    post '/sidebar_settings/update', params: {menu_json: '{]'}
+    assert_response :unprocessable_entity
+    assert_equal original, Setting.plugin_redmine_sidebar_settings['menu_json']
   end
 
-  test 'broken config does not break page rendering' do
-    Setting.plugin_redmine_sidebar_settings = {'rules_json' => 'not json at all'}
+  test 'broken stored config does not break page rendering' do
+    set_config('not json at all')
     log_user('admin', 'admin')
-    get '/issues'
+    get '/'
     assert_response :success
-    assert_no_match %r{window\.RedmineSidebarSettings}, response.body
   end
 end

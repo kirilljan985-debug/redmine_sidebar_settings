@@ -1,45 +1,39 @@
-<h2><%= l(:label_sidebar_settings) %></h2>
+<h2><%= l(:label_menu_settings) %></h2>
 
 <%= form_tag sidebar_settings_update_path, id: 'rss-form' do %>
-  <div class="box tabular">
+  <div class="box">
     <p><%= l(:rss_editor_hint) %></p>
-    <div id="rss-rows"></div>
-    <p>
-      <%= button_tag l(:rss_add_rule), type: 'button', id: 'rss-add' %>
-    </p>
-    <datalist id="rss-pages">
-      <% RedmineSidebarSettings::PAGE_CATALOG.each do |key, _sample| %>
-        <option value="<%= key %>"></option>
+    <div id="rss-rows">
+      <% @items.each do |item| %>
+        <div class="rss-row <%= 'rss-row-hidden' if item[:hidden] %>" data-name="<%= item[:name] %>" draggable="true">
+          <span class="rss-handle" title="<%= l(:rss_drag_hint) %>">&#8285;&#8285;</span>
+          <span class="rss-move">
+            <button type="button" class="rss-up" aria-label="<%= l(:rss_up) %>">&#8593;</button>
+            <button type="button" class="rss-down" aria-label="<%= l(:rss_down) %>">&#8595;</button>
+          </span>
+          <span class="rss-fields">
+            <input type="text" class="rss-caption"
+                   value="<%= item[:caption] %>"
+                   data-default="<%= item[:default_caption] %>"
+                   aria-label="<%= l(:rss_caption_label) %>">
+            <span class="rss-name"><%= item[:name] %></span>
+            <span class="rss-url"><%= item[:url_hint] %></span>
+          </span>
+          <label class="rss-hide-label">
+            <input type="checkbox" class="rss-hidden" <%= 'checked' if item[:hidden] %>>
+            <%= l(:rss_hidden_label) %>
+          </label>
+        </div>
       <% end %>
-    </datalist>
+    </div>
   </div>
   <details class="rss-json-details">
     <summary>JSON</summary>
-    <%= text_area_tag :rules_json, @rules_json, rows: 14, id: 'rules_json' %>
+    <%= text_area_tag :menu_json, @menu_json, rows: 12, id: 'menu_json' %>
     <p class="rss-hint"><%= l(:rss_json_hint) %></p>
   </details>
   <p><%= submit_tag l(:button_save) %></p>
 <% end %>
-
-<script id="rss-i18n" type="application/json"><%= raw({
-  page: l(:rss_page),
-  action: l(:rss_action),
-  kind: l(:rss_target_kind),
-  section: l(:rss_kind_section),
-  item: l(:rss_kind_item),
-  css: l(:rss_kind_css),
-  target_section: l(:rss_target_heading),
-  target_item: l(:rss_target_href),
-  target_css: l(:rss_target_css),
-  rename: l(:rss_action_rename),
-  hide: l(:rss_action_hide),
-  move: l(:rss_action_move),
-  value: l(:rss_new_title),
-  index: l(:rss_position),
-  up: l(:rss_move_up),
-  down: l(:rss_move_down),
-  remove: l(:rss_remove)
-}.to_json) %></script>
 
 <% content_for :header_tags do %>
   <%= stylesheet_link_tag 'sidebar_settings_admin', plugin: 'redmine_sidebar_settings' %>
