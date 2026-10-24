@@ -42,7 +42,11 @@ class SidebarSettingsIntegrationTest < Redmine::IntegrationTest
     Thread.current[:rsb_exception] = nil
     get '/'
     ex = Thread.current[:rsb_exception]
-    note = "status=#{response.status}; exception=#{ex.inspect}; body=#{response.body[0, 600]}"
+    b = response.body
+    h2 = b.index('<h2')
+    pre = b.index('<pre')
+    note = "status=#{response.status}; SHOWEX=#{ex.inspect}; " \
+           "H2=#{h2 ? b[h2, 500] : 'none'}; PRE=#{pre ? b[pre, 1400] : 'none'}"
     assert_response :success, note
   end
 
