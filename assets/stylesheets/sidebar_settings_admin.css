@@ -1,0 +1,12 @@
+/* redmine_sidebar_settings: admin rule editor */
+.rss-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; }
+.rss-row input[type=text], .rss-row input[type=number] { width: auto; }
+.rss-row .rss-page { width: 170px; font-family: ui-monospace, Consolas, monospace; }
+.rss-row .rss-target { width: 260px; }
+.rss-row .rss-value { width: 170px; }
+.rss-row .rss-index { width: 70px; }
+.rss-row .rss-del { color: #b3261e; }
+.rss-json-details { margin: 10px 0; }
+.rss-json-details summary { cursor: pointer; margin-bottom: 6px; }
+.rss-json-details textarea { width: 99%; font-family: ui-monospace, Consolas, monospace; }
+.rss-hint { font-size: 0.9em; color: #666; }

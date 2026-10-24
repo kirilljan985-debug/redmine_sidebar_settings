@@ -1,0 +1,47 @@
+<h2><%= l(:label_sidebar_settings) %></h2>
+
+<%= form_tag sidebar_settings_update_path, id: 'rss-form' do %>
+  <div class="box tabular">
+    <p><%= l(:rss_editor_hint) %></p>
+    <div id="rss-rows"></div>
+    <p>
+      <%= button_tag l(:rss_add_rule), type: 'button', id: 'rss-add' %>
+    </p>
+    <datalist id="rss-pages">
+      <% RedmineSidebarSettings::PAGE_CATALOG.each do |key, _sample| %>
+        <option value="<%= key %>"></option>
+      <% end %>
+    </datalist>
+  </div>
+  <details class="rss-json-details">
+    <summary>JSON</summary>
+    <%= text_area_tag :rules_json, @rules_json, rows: 14, id: 'rules_json' %>
+    <p class="rss-hint"><%= l(:rss_json_hint) %></p>
+  </details>
+  <p><%= submit_tag l(:button_save) %></p>
+<% end %>
+
+<script id="rss-i18n" type="application/json"><%= {
+  page: l(:rss_page),
+  action: l(:rss_action),
+  kind: l(:rss_target_kind),
+  section: l(:rss_kind_section),
+  item: l(:rss_kind_item),
+  css: l(:rss_kind_css),
+  target_section: l(:rss_target_heading),
+  target_item: l(:rss_target_href),
+  target_css: l(:rss_target_css),
+  rename: l(:rss_action_rename),
+  hide: l(:rss_action_hide),
+  move: l(:rss_action_move),
+  value: l(:rss_new_title),
+  index: l(:rss_position),
+  up: l(:rss_move_up),
+  down: l(:rss_move_down),
+  remove: l(:rss_remove)
+}.to_json %></script>
+
+<% content_for :header_tags do %>
+  <%= stylesheet_link_tag 'sidebar_settings_admin', plugin: 'redmine_sidebar_settings' %>
+  <%= javascript_include_tag 'sidebar_settings_admin', plugin: 'redmine_sidebar_settings', defer: true %>
+<% end %>

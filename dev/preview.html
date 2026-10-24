@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>redmine_sidebar_settings - dev preview</title>
+<style>
+  body { font: 13px/1.45 "Segoe UI", system-ui, Arial, sans-serif; color: #23282d; background: #f6f7f8; margin: 0; }
+  .page { display: flex; gap: 20px; padding: 20px; max-width: 900px; margin: 0 auto; }
+  #content { flex: 1; background: #fff; border: 1px solid #d3d8de; border-radius: 3px; padding: 16px; }
+  #sidebar { width: 260px; flex-shrink: 0; background: #f4f6f8; border: 1px solid #dde2e7; padding: 12px 16px; }
+  #sidebar h3 { font-size: 13px; margin: 12px 0 4px; }
+  #sidebar h3:first-child { margin-top: 0; }
+  #sidebar ul { margin: 0; padding-left: 16px; }
+  #sidebar li { margin: 3px 0; }
+  #sidebar a { color: #116699; }
+  #sidebar .rsb-hidden { display: none !important; }
+  .note { padding: 10px 20px; color: #666; }
+</style>
+</head>
+<body>
+<div class="note">Dev-стенд движка (без Redmine). При правке sidebar_settings.js поднимайте <code>?v=N</code> в подключении ниже.</div>
+<div class="page">
+  <div id="sidebar">
+    <div id="sidebar-wrapper">
+      <h3>Запросы</h3>
+      <ul>
+        <li><a href="/issues?query_id=1">Критичные баги</a></li>
+        <li><a href="/issues?query_id=2">Спринт 24</a></li>
+        <li><a href="/issues">Все открытые</a></li>
+      </ul>
+      <h3>Справка</h3>
+      <ul>
+        <li><a href="/help">Руководство пользователя</a></li>
+        <li><a href="/help/keyboard">Горячие клавиши</a></li>
+      </ul>
+      <div class="some-plugin-block">
+        <h3>Отчёты плагина</h3>
+        <ul>
+          <li><a href="/team_reports">Отчёты по команде</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div id="content">
+    <h2>Контент страницы</h2>
+    <p>Здесь мог бы быть список задач.</p>
+  </div>
+</div>
+<script>
+  /* Пример конфига, каким его отдаёт резолвер плагина. */
+  window.RedmineSidebarSettings = [
+    {page: '*', action: 'hide', target: {heading: 'Справка'}},
+    {page: '*', action: 'rename', target: {kind: 'section', heading: 'Запросы'}, value: 'Представления'},
+    {page: '*', action: 'move', target: {kind: 'section', heading: 'Отчёты плагина'}, index: 0},
+    {page: '*', action: 'rename', target: {kind: 'item', href: '/issues?query_id=1'}, value: 'Срочное'}
+  ];
+</script>
+<script src="../assets/javascripts/sidebar_settings.js?v=3"></script>
+</body>
+</html>

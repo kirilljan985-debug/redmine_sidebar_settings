@@ -1,0 +1,54 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        redmine: ['7.0-stable', 'master']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: plugin
+
+      - name: Clone Redmine
+        run: git clone --depth 1 --branch ${{ matrix.redmine }} https://github.com/redmine/redmine.git redmine
+
+      - name: Prepare database config and plugin directory
+        run: |
+          cp plugin/.github/ci/database.yml redmine/config/database.yml
+          mv plugin redmine/plugins/redmine_sidebar_settings
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: Bundle install
+        working-directory: redmine
+        run: bundle install --jobs 4
+
+      - name: Prepare test database
+        working-directory: redmine
+        run: |
+          bundle exec rake generate_secret_token
+          bundle exec rake db:migrate RAILS_ENV=test
+
+      - name: Run plugin tests
+        working-directory: redmine
+        shell: bash
+        run: |
+          set -o pipefail
+          bundle exec rake redmine:plugins:test NAME=redmine_sidebar_settings RAILS_ENV=test 2>&1 | tee /tmp/test_output.log
+
+      - name: Eager-load smoke check (as production)
+        working-directory: redmine
+        run: RAILS_ENV=test bundle exec rails runner 'Rails.application.eager_load!; puts :EAGER_OK'
+
+      - name: Report failure details
+        if: failure()
+        run: echo "::error::$(python3 -c "import urllib.parse; print(urllib.parse.quote(open('/tmp/test_output.log','rb').read()[-4000:].decode('utf-8','replace'))[:6000])")"
