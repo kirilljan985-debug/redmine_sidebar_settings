@@ -1,15 +1,6 @@
 # frozen_string_literal: true
 
 module RedmineSidebarSettings
-  class ValidationError < StandardError
-    attr_reader :errors
-
-    def initialize(errors)
-      @errors = errors
-      super(errors.join('; '))
-    end
-  end
-
   # Normalization and validation of the rule set stored in plugin settings.
   # Pure logic without Rails dependencies, raises ValidationError on bad input.
   module Config

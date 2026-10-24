@@ -51,4 +51,22 @@ jobs:
 
       - name: Report failure details
         if: failure()
-        run: echo "::error::$(python3 -c "import urllib.parse; print(urllib.parse.quote(open('/tmp/test_output.log','rb').read()[-4000:].decode('utf-8','replace'))[:6000])")"
+        run: |
+          python3 - <<'PY' > /tmp/failure_report.txt
+          import urllib.parse
+          out = []
+          try:
+              text = open('/tmp/test_output.log','rb').read().decode('utf-8','replace')
+              out.append(text[-3500:])
+          except Exception as e:
+              out.append(f"no test output: {e}")
+          try:
+              text = open('redmine/log/test.log','rb').read().decode('utf-8','replace')
+              idx = text.rfind('Completed 500')
+              block = text[idx:idx+3000] if idx != -1 else text[-3000:]
+              out.append("TEST.LOG 500-BLOCK:\n" + block)
+          except Exception as e:
+              out.append(f"no test.log: {e}")
+          print(urllib.parse.quote("\n====\n".join(out))[:6000])
+          PY
+          echo "::error::$(cat /tmp/failure_report.txt)"
