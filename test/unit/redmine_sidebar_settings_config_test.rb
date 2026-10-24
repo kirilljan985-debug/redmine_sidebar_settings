@@ -15,9 +15,13 @@ class RedmineSidebarSettingsConfigTest < ActiveSupport::TestCase
     assert_equal ['help'], config['hidden']
   end
 
-  test 'parse rejects non-object json' do
+  test 'parse accepts array as empty config' do
+    assert_equal RedmineSidebarSettings::Config::EMPTY, RedmineSidebarSettings::Config.parse('["home"]')
+  end
+
+  test 'parse rejects scalar json' do
     assert_raises(RedmineSidebarSettings::ValidationError) do
-      RedmineSidebarSettings::Config.parse('["home"]')
+      RedmineSidebarSettings::Config.parse('42')
     end
   end
 
