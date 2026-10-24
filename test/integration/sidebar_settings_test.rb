@@ -42,9 +42,14 @@ class SidebarSettingsIntegrationTest < Redmine::IntegrationTest
     Thread.current[:rsb_exception] = nil
     get '/'
     ex = Thread.current[:rsb_exception]
-    body_note = response.status >= 500 ? " | BODY: #{response.body[0, 700]}" : ''
-    assert_response :success,
-                    "exception during '/': #{ex.class}: #{ex.message}#{body_note}"
+    note = "status=#{response.status}; exception=#{ex.inspect}; body=#{response.body[0, 600]}"
+    assert_response :success, note
+  end
+
+  test 'sanity: logged-in core page renders' do
+    log_user('admin', 'admin')
+    get '/'
+    assert_response :success, "status=#{response.status}; body=#{response.body[0, 900]}"
   end
 
   test 'admin saves valid rules' do

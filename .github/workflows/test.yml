@@ -70,7 +70,7 @@ jobs:
                       idx = i
                       break
               block = '\n'.join(keep[max(0,idx-40):idx+8]) if idx is not None else '\n'.join(keep[-40:])
-              out.append("TEST.LOG 500-CONTEXT:\n" + block[-2800:])
+              out.append("TEST.LOG 500-CONTEXT:\n" + block[:2800])
           except Exception as e:
               out.append(f"no test.log: {e}")
           print(urllib.parse.quote("\n====\n".join(out))[:6000])
