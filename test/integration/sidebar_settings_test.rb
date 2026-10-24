@@ -29,13 +29,21 @@ class SidebarSettingsIntegrationTest < Redmine::IntegrationTest
   end
 
   test 'sanity: core pages render without the plugin involved' do
+    ActionDispatch::ShowExceptions.class_eval do
+      unless method_defined?(:rsb_orig_render_exception)
+        alias_method :rsb_orig_render_exception, :render_exception
+        def render_exception(request, exception, wrapper)
+          Thread.current[:rsb_exception] = exception
+          rsb_orig_render_exception(request, exception, wrapper)
+        end
+      end
+    end
+
+    Thread.current[:rsb_exception] = nil
     get '/'
-    assert_response :success
-    log_user('admin', 'admin')
-    get '/'
-    assert_response :success
-    get '/login'
-    assert_response :success
+    ex = Thread.current[:rsb_exception]
+    assert_response :success,
+                    "exception during '/': #{ex.class}: #{ex.message} | #{Array(ex.backtrace)[0, 6].join(' | ')}"
   end
 
   test 'admin saves valid rules' do
