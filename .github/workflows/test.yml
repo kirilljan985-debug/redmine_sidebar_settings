@@ -62,9 +62,15 @@ jobs:
               out.append(f"no test output: {e}")
           try:
               text = open('redmine/log/test.log','rb').read().decode('utf-8','replace')
-              idx = text.rfind('Completed 500')
-              block = text[max(0,idx-2600):idx+500] if idx != -1 else text[-3000:]
-              out.append("TEST.LOG 500-CONTEXT:\n" + block)
+              lines = text.splitlines()
+              keep = [l for l in lines if not any(s in l for s in ('SELECT','Setting Load','↳','CACHE','EXISTS','Loading fixture'))]
+              idx = None
+              for i in range(len(keep)-1, -1, -1):
+                  if 'Completed 500' in keep[i]:
+                      idx = i
+                      break
+              block = '\n'.join(keep[max(0,idx-40):idx+8]) if idx is not None else '\n'.join(keep[-40:])
+              out.append("TEST.LOG 500-CONTEXT:\n" + block[-2800:])
           except Exception as e:
               out.append(f"no test.log: {e}")
           print(urllib.parse.quote("\n====\n".join(out))[:6000])

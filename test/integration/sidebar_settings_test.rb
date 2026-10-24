@@ -42,8 +42,9 @@ class SidebarSettingsIntegrationTest < Redmine::IntegrationTest
     Thread.current[:rsb_exception] = nil
     get '/'
     ex = Thread.current[:rsb_exception]
+    body_note = response.status >= 500 ? " | BODY: #{response.body[0, 700]}" : ''
     assert_response :success,
-                    "exception during '/': #{ex.class}: #{ex.message} | #{Array(ex.backtrace)[0, 6].join(' | ')}"
+                    "exception during '/': #{ex.class}: #{ex.message}#{body_note}"
   end
 
   test 'admin saves valid rules' do
