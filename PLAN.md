@@ -10,7 +10,7 @@
 - [x] Админка «Сайдбар»: контроллер (require_admin), редактор правил, JSON-фолбэк
 - [x] Тесты: unit (Config, Resolver) + integration (права, сохранение, доставка, отказоустойчивость)
 - [x] CI: матрица 7.0-stable/master, sqlite, eager-load smoke check, аннотации ошибок
-- [ ] Зелёный CI после первого push
+- [x] Зелёный CI (тесты + eager-load smoke) на 7.0-stable и master
 
 ## v1.1 — сканер фактического состава
 
