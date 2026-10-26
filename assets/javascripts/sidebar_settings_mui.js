@@ -13,6 +13,11 @@
 (function () {
   'use strict';
 
+  /* Temporary diagnostics: shows exactly what the engine sees and applies. */
+  function log(message) {
+    try { window.console && console.warn('[sidebar_settings] ' + message); } catch (e) { /* noop */ }
+  }
+
   /* Redmine may be deployed under a subdirectory, so match a configured
      path against the pathname suffix; '/' means the app root. */
   function matches(pathname, path) {
@@ -30,18 +35,31 @@
 
   function apply() {
     var config = window.RedmineSidebarSettingsMui;
-    if (!config) { return; }
+    if (!config) {
+      log('no config on the page (mui_nav is empty, or this is an old plugin build)');
+      return;
+    }
 
     var aside = document.querySelector('aside.mui-nav');
-    if (!aside) { return; }
+    if (!aside) {
+      log('aside.mui-nav not found (no ModernLayout panel on this page?)');
+      return;
+    }
     /* The fixed links live in the first section (the one without a title). */
     var section = aside.querySelector('nav.mui-nav-section');
-    if (!section) { return; }
+    if (!section) {
+      log('nav.mui-nav-section not found inside the panel');
+      return;
+    }
 
     var byPath = {};
     Array.prototype.forEach.call(section.querySelectorAll('a.mui-nav-link'), function (a) {
       byPath[a.pathname.replace(/\/+$/, '')] = a;
     });
+    log('panel found, fixed links: ' + Object.keys(byPath).length +
+        '; config: renames=' + JSON.stringify(config.renames || {}) +
+        ', hidden=' + JSON.stringify(config.hidden || []) +
+        ', order=' + JSON.stringify(config.order || []));
 
     function link(name) {
       var path = PATHS[name];
@@ -55,17 +73,21 @@
     }
 
     var renames = config.renames || {};
+    var appliedRenames = 0;
     Object.keys(renames).forEach(function (name) {
       var a = link(name);
       if (!a) { return; }
       var label = a.querySelector('.mui-label');
       if (label) { label.textContent = renames[name]; }
       a.title = renames[name];
+      appliedRenames += 1;
     });
 
-    (config.hidden || []).forEach(function (name) {
+    var hidden = config.hidden || [];
+    var appliedHidden = 0;
+    hidden.forEach(function (name) {
       var a = link(name);
-      if (a) { a.style.display = 'none'; }
+      if (a) { a.style.display = 'none'; appliedHidden += 1; }
     });
 
     var order = (config.order || []).filter(function (name) { return link(name); });
@@ -77,6 +99,13 @@
         cursor = a;
       });
     }
+
+    var allNamed = Object.keys(renames).concat(hidden);
+    var missing = allNamed.filter(function (name) { return !link(name); });
+    log('applied: renames ' + appliedRenames + '/' + Object.keys(renames).length +
+        ', hidden ' + appliedHidden + '/' + hidden.length +
+        ', order ' + order.length +
+        (missing.length ? '; UNMATCHED: ' + missing.join(', ') : ''));
   }
 
   if (document.readyState === 'loading') {
