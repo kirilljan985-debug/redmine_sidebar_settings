@@ -1,10 +1,11 @@
 <h2><%= l(:label_menu_settings) %></h2>
 
 <%= form_tag sidebar_settings_update_path, id: 'rss-form' do %>
+  <p><%= l(:rss_editor_hint) %></p>
   <% @groups.each do |group| %>
     <div class="box">
       <h3 class="rss-group-title"><%= group[:title] %></h3>
-      <p><%= l(:rss_editor_hint) %></p>
+      <p class="rss-hint"><%= group[:hint] %></p>
       <div id="rss-rows" class="rss-rows" data-menu="<%= group[:key] %>">
         <% group[:items].each do |item| %>
           <div class="rss-row <%= 'rss-row-hidden' if item[:hidden] %>" data-name="<%= item[:name] %>" draggable="true">

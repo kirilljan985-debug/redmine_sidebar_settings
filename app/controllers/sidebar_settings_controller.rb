@@ -36,19 +36,22 @@ class SidebarSettingsController < ApplicationController
   # that Redmine calls internally; overriding it breaks every render.
   def build_groups
     config = RedmineSidebarSettings.menu_config
-    groups = []
+    # The ModernLayout panel group goes first: under ModernLayout it is the
+    # one that actually draws the top block (Home, My page, ...).
+    groups = [{
+      :key => 'mui_nav',
+      :title => l(:rss_group_mui_nav),
+      :hint => l(:rss_group_hint_mui_nav),
+      :items => mui_items(config)
+    }]
     config['menus'].each_key do |menu|
       groups << {
         :key => menu,
         :title => l(:"rss_group_#{menu}"),
+        :hint => l(:"rss_group_hint_#{menu}"),
         :items => menu_entries(menu, config)
       }
     end
-    groups << {
-      :key => 'mui_nav',
-      :title => l(:rss_group_mui_nav),
-      :items => mui_items(config)
-    }
     groups
   end
 
