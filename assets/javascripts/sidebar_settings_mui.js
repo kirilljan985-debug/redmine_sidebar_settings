@@ -6,12 +6,19 @@
  * matching them by their stable paths. Display only: the links keep their
  * targets, and hidden items are restored by simply unchecking them in the
  * settings (each page load starts from the server-rendered markup).
+ *
+ * Runs deferred; the config (window.RedmineSidebarSettingsMui, injected
+ * inline before this file) is read lazily inside apply().
  */
 (function () {
   'use strict';
 
-  var config = window.RedmineSidebarSettingsMui;
-  if (!config) { return; }
+  /* Redmine may be deployed under a subdirectory, so match a configured
+     path against the pathname suffix; '/' means the app root. */
+  function matches(pathname, path) {
+    if (path === '/') { return pathname === ''; }
+    return pathname === path || pathname.slice(-path.length) === path;
+  }
 
   var PATHS = {
     home: '/',
@@ -22,6 +29,9 @@
   };
 
   function apply() {
+    var config = window.RedmineSidebarSettingsMui;
+    if (!config) { return; }
+
     var aside = document.querySelector('aside.mui-nav');
     if (!aside) { return; }
     /* The fixed links live in the first section (the one without a title). */
@@ -30,12 +40,18 @@
 
     var byPath = {};
     Array.prototype.forEach.call(section.querySelectorAll('a.mui-nav-link'), function (a) {
-      byPath[a.pathname.replace(/\/$/, '') || '/'] = a;
+      byPath[a.pathname.replace(/\/+$/, '')] = a;
     });
 
     function link(name) {
       var path = PATHS[name];
-      return path ? byPath[path.replace(/\/$/, '') || '/'] : null;
+      if (!path) { return null; }
+      var found = null;
+      Object.keys(byPath).some(function (pathname) {
+        if (matches(pathname, path)) { found = byPath[pathname]; return true; }
+        return false;
+      });
+      return found;
     }
 
     var renames = config.renames || {};
@@ -47,8 +63,7 @@
       a.title = renames[name];
     });
 
-    var hidden = config.hidden || [];
-    hidden.forEach(function (name) {
+    (config.hidden || []).forEach(function (name) {
       var a = link(name);
       if (a) { a.style.display = 'none'; }
     });

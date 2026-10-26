@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>redmine_sidebar_settings - mui dev preview</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 0; display: flex; }
+  aside.mui-nav { width: 240px; background: #f4f6f8; border-right: 1px solid #dde2e7; padding: 10px; min-height: 100vh; }
+  .mui-nav-section { margin: 12px 0; }
+  .mui-nav-title { font-size: 11px; letter-spacing: .08em; color: #8a939e; margin-bottom: 6px; }
+  a.mui-nav-link { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 6px; color: #23282d; text-decoration: none; }
+  a.mui-nav-link:hover { background: #e8eef4; }
+  .mui-label { }
+  .content { padding: 20px; }
+</style>
+</head>
+<body>
+<aside class="mui-nav" id="mui-nav">
+  <div class="mui-nav-head"><strong>Redmine</strong></div>
+  <div class="mui-search"><input placeholder="Поиск…"></div>
+  <nav class="mui-nav-section">
+    <a class="mui-nav-link" href="/"><span class="mui-label">Домашняя страница</span></a>
+    <a class="mui-nav-link" href="/my"><span class="mui-label">Моя страница</span></a>
+    <a class="mui-nav-link" href="/issues?set_filter=1&amp;assigned_to_id=me"><span class="mui-label">Мои задачи</span></a>
+    <a class="mui-nav-link" href="/projects"><span class="mui-label">Проекты</span></a>
+    <a class="mui-nav-link" href="/admin"><span class="mui-label">Администрирование</span></a>
+  </nav>
+  <nav class="mui-nav-section">
+    <div class="mui-nav-title"><span class="mui-label">Рабочее пространство</span></div>
+    <a class="mui-nav-link" href="/activity"><span class="mui-label">Действия</span></a>
+  </nav>
+</aside>
+<div class="content">
+  <p>Контент страницы. Ожидаемый результат: порядок «Администрирование, Главная, Мои задачи, (Моя страница скрыта), Проекты»; подписи «Главная» и «Мои задачи».</p>
+</div>
+<script>
+  window.RedmineSidebarSettingsMui = {
+    order: ["administration", "home", "my_issues", "my_page", "projects"],
+    renames: {"home": "Главная", "my_issues": "Мои задачи"},
+    hidden: ["my_page"]
+  };
+</script>
+<script src="../assets/javascripts/sidebar_settings_mui.js?v=1"></script>
+</body>
+</html>

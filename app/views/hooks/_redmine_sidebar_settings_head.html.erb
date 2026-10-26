@@ -1,7 +1,10 @@
 <%# Client-side config for ModernLayout's fixed side panel links.
-    Injected only when the mui_nav configuration is non-empty. %>
+    Injected only when the mui_nav configuration is non-empty.
+    The config MUST come before the engine: the inline script executes
+    synchronously, while the engine file is deferred and reads the config
+    lazily after the DOM is ready. %>
 <% mui = RedmineSidebarSettings.menu_config['mui_nav'] %>
 <% if mui['order'].any? || mui['renames'].any? || mui['hidden'].any? %>
-<%= javascript_include_tag 'sidebar_settings_mui', plugin: 'redmine_sidebar_settings' %>
 <%= javascript_tag "window.RedmineSidebarSettingsMui = #{mui.to_json};" %>
+<%= javascript_include_tag 'sidebar_settings_mui', plugin: 'redmine_sidebar_settings', defer: true %>
 <% end %>
