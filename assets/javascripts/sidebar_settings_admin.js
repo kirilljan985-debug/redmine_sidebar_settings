@@ -28,6 +28,18 @@
       if (e.target.classList.contains('rss-down')) { moveRow(row, 1); }
     });
 
+    /* Rows are draggable only while dragging starts from the handle:
+       otherwise the browser hijacks mouse actions inside the caption
+       inputs (caret jumps to the start, text cannot be selected). */
+    container.addEventListener('mousedown', function (e) {
+      var row = e.target.closest('.rss-row');
+      if (row) { row.draggable = e.target.classList.contains('rss-handle'); }
+    });
+    container.addEventListener('mouseup', function (e) {
+      var row = e.target.closest('.rss-row');
+      if (row) { row.draggable = false; }
+    });
+
     /* Mouse drag-n-drop */
     var dragged = null;
     container.addEventListener('dragstart', function (e) {
@@ -43,12 +55,23 @@
       container.insertBefore(dragged, before ? over : over.nextElementSibling);
     });
     container.addEventListener('drop', function (e) { e.preventDefault(); });
-    container.addEventListener('dragend', function () { dragged = null; });
+    container.addEventListener('dragend', function (e) {
+      var row = e.target.closest('.rss-row');
+      if (row) { row.draggable = false; }
+      dragged = null;
+    });
 
     container.addEventListener('change', function (e) {
       if (e.target.classList.contains('rss-hidden')) {
         e.target.closest('.rss-row').classList.toggle('rss-row-hidden', e.target.checked);
       }
+    });
+
+    /* Place the caret at the end of the caption when the field gets focus. */
+    container.addEventListener('focusin', function (e) {
+      if (!e.target.classList.contains('rss-caption')) { return; }
+      var end = e.target.value.length;
+      try { e.target.setSelectionRange(end, end); } catch (err) { /* noop */ }
     });
   });
 
