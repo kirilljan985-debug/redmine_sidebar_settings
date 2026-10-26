@@ -5,7 +5,7 @@ Redmine::Plugin.register :redmine_sidebar_settings do
   name 'Настройки меню'
   author 'Redmine Sidebar Settings contributors'
   description 'Rename, hide and reorder the Redmine application menu items. Display only - functions and pages stay reachable by their URLs, hidden items can be restored from the same settings.'
-  version '2.0.0'
+  version '2.1.0'
   url 'https://github.com/kirilljan985-debug/redmine_sidebar_settings'
   requires_redmine version_or_higher: '7.0.0'
 

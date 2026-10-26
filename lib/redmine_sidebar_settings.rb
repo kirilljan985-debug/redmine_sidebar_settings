@@ -4,15 +4,26 @@ require 'json'
 
 # Root module of the redmine_sidebar_settings plugin ("Настройки меню").
 #
-# Manages the Redmine application menu (:top_menu) display: rename, hide and
-# reorder menu items. Everything happens server-side inside
-# Redmine::MenuManager, so every layout and theme (including ModernLayout)
-# renders the configured menu. Routes, permissions and pages are never
-# touched: a hidden item stays reachable by its direct URL, and it can be
-# restored from the same settings page.
+# Manages the Redmine application menus (:top_menu, :application_menu,
+# :project_menu) display: rename, hide and reorder items. Everything happens
+# server-side inside Redmine::MenuManager, so every layout and theme -
+# including ModernLayout, whose "workspace" section renders :application_menu
+# / :project_menu - picks the configuration up automatically. Routes,
+# permissions and pages are never touched: a hidden item stays reachable by
+# its direct URL and can be restored from the same settings page.
+#
+# ModernLayout's fixed top links (Home, My page, My issues, Projects,
+# Administration) are hardcoded in its layout and cannot be managed through
+# MenuManager; they are handled by a small client-side layer (mui_nav).
 module RedmineSidebarSettings
-  # The only menu managed by the plugin.
-  MENU = :top_menu
+  # Fixed links of the ModernLayout side panel (top section), by stable path.
+  MUI_NAV_ITEMS = [
+    ['home', '/', 'rss_mui_home'],
+    ['my_page', '/my', 'rss_mui_my_page'],
+    ['my_issues', '/issues', 'rss_mui_my_issues'],
+    ['projects', '/projects', 'rss_mui_projects'],
+    ['administration', '/admin', 'rss_mui_administration']
+  ].freeze
 
   module_function
 

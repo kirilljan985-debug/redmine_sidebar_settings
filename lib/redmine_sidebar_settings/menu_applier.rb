@@ -3,35 +3,61 @@
 module RedmineSidebarSettings
   # Applies the stored menu configuration to Redmine::MenuManager.
   #
-  # Only the in-memory menu tree is modified: item captions, the order of
+  # Only the in-memory menu trees are modified: item captions, the order of
   # children and whether an item is rendered at all. Routes, permissions and
   # pages are never touched, so a hidden item remains reachable by its direct
   # URL. Applying is idempotent and safe to call on every boot.
   module MenuApplier
     module_function
 
-    # Hidden items are kept here (per process) so the same settings page can
-    # restore them without a restart. On boot the owning plugins re-create
-    # their items anyway, and apply! hides them again as configured.
+    # Hidden items are kept here (per menu, per process) so the same settings
+    # page can restore them without a restart. On boot the owning plugins
+    # re-create their items anyway, and apply! hides them again as configured.
     def stash
-      @stash ||= {}
+      @stash ||= Hash.new { |hash, menu| hash[menu] = {} }
     end
 
     # Original (pre-rename) caption values, raw as stored in the item.
     def originals
-      @originals ||= {}
+      @originals ||= Hash.new { |hash, menu| hash[menu] = {} }
     end
 
     def apply!
-      root = Redmine::MenuManager.map(RedmineSidebarSettings::MENU).menu_items.root
-      config = RedmineSidebarSettings.menu_config
+      Config::MENUS.each do |menu|
+        apply_menu(menu, RedmineSidebarSettings.menu_config['menus'][menu])
+      end
+      nil
+    end
+
+    # Items hidden by the config (name => MenuItem), for the admin UI.
+    def hidden_items(menu)
+      stash[menu].dup
+    end
+
+    # Resolved original caption of an item - what it shows without renames.
+    def original_caption(menu, item)
+      raw = originals[menu].fetch(item.name.to_s) { item.instance_variable_get(:@caption) }
+      resolve_caption(raw, item.name)
+    end
+
+    def resolve_caption(raw, name)
+      case raw
+      when Proc then raw.call.to_s
+      when Symbol then ::I18n.t(raw, :default => name.to_s.humanize)
+      when String then raw
+      else name.to_s.humanize
+      end
+    end
+
+    def apply_menu(menu, config)
+      root = Redmine::MenuManager.map(menu).menu_items.root
       hidden = config['hidden']
 
       # 1. Return stashed items that are no longer hidden.
-      stash.each_key do |name|
+      stash[menu].each_key do |name|
         next if hidden.include?(name)
 
-        item = stash.delete(name)
+        item = stash[menu].delete(name)
         root.add_at(item, root.children.size - root.last_items_count) if item
       end
 
@@ -42,25 +68,25 @@ module RedmineSidebarSettings
 
         root.children.delete(item)
         item.parent = nil
-        stash[name] = item
+        stash[menu][name] = item
       end
 
       # 3. Renames (revert the ones removed from the config first).
-      originals.keys.dup.each do |name|
+      originals[menu].keys.dup.each do |name|
         next if config['renames'].key?(name)
 
-        item = find_item(root, name)
+        item = find_item(menu, root, name)
         if item
-          item.instance_variable_set(:@caption, originals.delete(name))
+          item.instance_variable_set(:@caption, originals[menu].delete(name))
         else
-          originals.delete(name)
+          originals[menu].delete(name)
         end
       end
       config['renames'].each do |name, caption|
-        item = find_item(root, name)
+        item = find_item(menu, root, name)
         next unless item
 
-        originals[name] = item.instance_variable_get(:@caption) unless originals.key?(name)
+        originals[menu][name] = item.instance_variable_get(:@caption) unless originals[menu].key?(name)
         item.instance_variable_set(:@caption, caption)
       end
 
@@ -75,28 +101,8 @@ module RedmineSidebarSettings
       nil
     end
 
-    # Items hidden by the config (name => MenuItem), for the admin UI.
-    def hidden_items
-      stash.dup
-    end
-
-    # Resolved original caption of an item - what it shows without renames.
-    def original_caption(item)
-      raw = originals.fetch(item.name.to_s) { item.instance_variable_get(:@caption) }
-      resolve_caption(raw, item.name)
-    end
-
-    def resolve_caption(raw, name)
-      case raw
-      when Proc then raw.call.to_s
-      when Symbol then ::I18n.t(raw, :default => name.to_s.humanize)
-      when String then raw
-      else name.to_s.humanize
-      end
-    end
-
-    def find_item(root, name)
-      root.children.find { |c| c.name.to_s == name } || stash[name]
+    def find_item(menu, root, name)
+      root.children.find { |c| c.name.to_s == name } || stash[menu][name]
     end
   end
 end

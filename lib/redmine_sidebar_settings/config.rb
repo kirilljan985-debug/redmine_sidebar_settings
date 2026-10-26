@@ -4,17 +4,31 @@ module RedmineSidebarSettings
   # Normalization and validation of the menu configuration stored in plugin
   # settings. Pure logic without Rails dependencies, raises ValidationError
   # on bad input.
+  #
+  # Schema v2:
+  # {
+  #   "menus": {
+  #     "top_menu":        {"order" => [...], "renames" => {...}, "hidden" => [...]},
+  #     "application_menu": {...},
+  #     "project_menu":     {...}
+  #   },
+  #   "mui_nav": {...}  # fixed links of the ModernLayout side panel (DOM layer)
+  # }
+  # A legacy flat config (only the three keys) is treated as top_menu.
   module Config
     NAME_PATTERN = /\A[\w-]+\z/
     MAX_ITEMS = 100
     MAX_CAPTION = 100
+    MENUS = %w[top_menu application_menu project_menu].freeze
+    SECTIONS = (MENUS + %w[mui_nav]).freeze
 
-    EMPTY = {'order' => [].freeze, 'renames' => {}.freeze, 'hidden' => [].freeze}.freeze
+    EMPTY_PART = {'order' => [].freeze, 'renames' => {}.freeze, 'hidden' => [].freeze}.freeze
+    EMPTY = {'menus' => MENUS.each_with_object({}) { |m, h| h[m] = EMPTY_PART },
+             'mui_nav' => EMPTY_PART}.freeze
 
     module_function
 
-    # Parses a JSON string into a normalized configuration:
-    # {"order" => [names], "renames" => {name => caption}, "hidden" => [names]}
+    # Parses a JSON string into a normalized configuration.
     def parse(json_string)
       raw = JSON.parse(json_string.to_s)
       return normalize({}) if raw.is_a?(Array)
@@ -29,31 +43,62 @@ module RedmineSidebarSettings
     end
 
     def normalize(raw)
-      errors = []
-      order = normalize_names(raw['order'], 'order')
-      renames = normalize_renames(raw['renames'])
-      hidden = normalize_names(raw['hidden'], 'hidden')
+      if raw['menus'].is_a?(Hash) || raw.key?('mui_nav')
+        normalize_v2(raw)
+      else
+        # Legacy flat config: {order, renames, hidden} meant top_menu.
+        {'menus' => {MENUS.first => normalize_part(raw)},
+         'mui_nav' => normalize_part(nil)}.tap do |config|
+          MENUS.drop(1).each { |menu| config['menus'][menu] = normalize_part(nil) }
+        end
+      end
+    end
 
-      errors << 'order must be an array of item names' if order.nil?
-      errors << 'renames must be an object of item name => caption' if renames.nil?
-      errors << 'hidden must be an array of item names' if hidden.nil?
+    def normalize_v2(raw)
+      errors = []
+      menus_raw = raw['menus'].is_a?(Hash) ? raw['menus'] : {}
+      unknown = menus_raw.keys.map(&:to_s) - MENUS
+      errors << "unknown menus: #{unknown.join(', ')}" unless unknown.empty?
+
+      menus = {}
+      MENUS.each do |menu|
+        part = normalize_part(menus_raw[menu])
+        errors << "#{menu}: invalid configuration" if part.nil?
+        menus[menu] = part
+      end
+
+      mui = normalize_part(raw['mui_nav'])
+      errors << 'mui_nav: invalid configuration' if mui.nil?
+
       raise ValidationError, errors unless errors.empty?
+
+      {'menus' => menus, 'mui_nav' => mui}
+    end
+
+    # {"order" => [names], "renames" => {name => caption}, "hidden" => [names]}
+    def normalize_part(value)
+      return EMPTY_PART.dup if value.nil?
+      return nil unless value.is_a?(Hash)
+
+      order = normalize_names(value['order'])
+      renames = normalize_renames(value['renames'])
+      hidden = normalize_names(value['hidden'])
+      return nil if order.nil? || renames.nil? || hidden.nil?
 
       {'order' => order, 'renames' => renames, 'hidden' => hidden}
     end
 
-    def normalize_names(value, key)
+    def normalize_names(value)
       return [] if value.nil?
       return nil unless value.is_a?(Array)
       return nil if value.size > MAX_ITEMS
 
-      names = value.map do |name|
+      value.map do |name|
         name = name.to_s.strip
         return nil unless name.match?(NAME_PATTERN)
 
         name
       end.uniq
-      names
     end
 
     def normalize_renames(value)

@@ -1,20 +1,22 @@
 /* redmine_sidebar_settings: menu editor */
-#rss-rows .rss-row {
+.rss-group-title { margin: 2px 0 8px; }
+.rss-rows .rss-row {
   display: flex; align-items: center; gap: 8px;
   padding: 6px 8px; border: 1px solid #d3d8de; border-radius: 3px;
   margin-bottom: 4px; background: #fafbfc; flex-wrap: wrap;
 }
-#rss-rows .rss-row:active { cursor: grabbing; }
-#rss-rows .rss-handle { cursor: grab; color: #8a939e; letter-spacing: -2px; }
-#rss-rows .rss-move button { padding: 1px 6px; }
-#rss-rows .rss-fields { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 260px; flex-wrap: wrap; }
-#rss-rows .rss-caption { width: 220px; }
-#rss-rows .rss-name { font-family: ui-monospace, Consolas, monospace; font-size: 0.9em; color: #116699; }
-#rss-rows .rss-url { font-family: ui-monospace, Consolas, monospace; font-size: 0.85em; color: #8a939e; }
-#rss-rows .rss-hide-label { white-space: nowrap; font-size: 0.9em; }
-#rss-rows .rss-row-hidden { opacity: 0.55; background: #f4f4f4; }
-#rss-rows .rss-row-hidden .rss-caption { text-decoration: line-through; }
+.rss-rows .rss-row:active { cursor: grabbing; }
+.rss-rows .rss-handle { cursor: grab; color: #8a939e; letter-spacing: -2px; }
+.rss-rows .rss-move button { padding: 1px 6px; }
+.rss-rows .rss-fields { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 260px; flex-wrap: wrap; }
+.rss-rows .rss-caption { width: 220px; }
+.rss-rows .rss-name { font-family: ui-monospace, Consolas, monospace; font-size: 0.9em; color: #116699; }
+.rss-rows .rss-url { font-family: ui-monospace, Consolas, monospace; font-size: 0.85em; color: #8a939e; }
+.rss-rows .rss-hide-label { white-space: nowrap; font-size: 0.9em; }
+.rss-rows .rss-row-hidden { opacity: 0.55; background: #f4f4f4; }
+.rss-rows .rss-row-hidden .rss-caption { text-decoration: line-through; }
 .rss-json-details { margin: 10px 0; }
 .rss-json-details summary { cursor: pointer; margin-bottom: 6px; }
 .rss-json-details textarea { width: 99%; font-family: ui-monospace, Consolas, monospace; }
 .rss-hint { font-size: 0.9em; color: #666; }
+

@@ -1,16 +1,16 @@
 require File.expand_path('../../test_helper', __FILE__)
 
 class RedmineSidebarSettingsMenuApplierTest < ActiveSupport::TestCase
-  def root
-    Redmine::MenuManager.map(RedmineSidebarSettings::MENU).menu_items.root
+  def root(menu = :top_menu)
+    Redmine::MenuManager.map(menu).menu_items.root
   end
 
-  def names
-    root.children.map { |c| c.name.to_s }
+  def names(menu = :top_menu)
+    root(menu).children.map { |c| c.name.to_s }
   end
 
-  def item(name)
-    root.children.find { |c| c.name.to_s == name }
+  def item(name, menu = :top_menu)
+    root(menu).children.find { |c| c.name.to_s == name }
   end
 
   def set_config(json)
@@ -18,11 +18,24 @@ class RedmineSidebarSettingsMenuApplierTest < ActiveSupport::TestCase
     RedmineSidebarSettings::MenuApplier.apply!
   end
 
-  def teardown
-    set_config('{"order":[],"renames":{},"hidden":[]}')
+  def setup
+    Redmine::MenuManager.map(:application_menu) do |menu|
+      menu.push :rsb_test_a, {controller: 'welcome'}, :caption => 'Test A'
+      menu.push :rsb_test_b, {controller: 'welcome'}, :caption => 'Test B'
+    end
   end
 
-  test 'renames, hides and reorders menu items' do
+  def teardown
+    set_config('{"menus":{},"mui_nav":{}}')
+    mapper = Redmine::MenuManager.map(:application_menu)
+    mapper.delete(:rsb_test_a)
+    mapper.delete(:rsb_test_b)
+    applier = RedmineSidebarSettings::MenuApplier
+    applier.stash.delete(:application_menu)
+    applier.originals.delete(:application_menu)
+  end
+
+  test 'renames, hides and reorders top_menu items (legacy flat config)' do
     original_home = item('home').caption
     set_config('{"order":["projects","home"],"renames":{"home":"Старт"},"hidden":["help"]}')
 
@@ -33,28 +46,27 @@ class RedmineSidebarSettingsMenuApplierTest < ActiveSupport::TestCase
   end
 
   test 'apply is idempotent' do
-    json = '{"order":["projects","home"],"renames":{"home":"Старт"},"hidden":["help"]}'
+    json = '{"menus":{"application_menu":{"order":["rsb_test_b","rsb_test_a"],"renames":{"rsb_test_a":"А"},"hidden":[]}},"mui_nav":{}}'
     set_config(json)
-    first = names.dup
+    first = names(:application_menu)
     set_config(json)
-    assert_equal first, names
+    assert_equal first, names(:application_menu)
   end
 
-  test 'hidden item can be restored from the same settings' do
-    set_config('{"order":[],"renames":{},"hidden":["help"]}')
-    assert_not_includes names, 'help'
+  test 'hidden item can be restored from the same settings (application_menu)' do
+    set_config('{"menus":{"application_menu":{"order":[],"renames":{},"hidden":["rsb_test_a"]}},"mui_nav":{}}')
+    assert_not_includes names(:application_menu), 'rsb_test_a'
 
-    set_config('{"order":[],"renames":{},"hidden":[]}')
-    assert_includes names, 'help'
+    set_config('{"menus":{"application_menu":{"order":[],"renames":{},"hidden":[]}},"mui_nav":{}}')
+    assert_includes names(:application_menu), 'rsb_test_a'
   end
 
-  test 'removing a rename restores the original caption' do
-    original = item('home').caption
-    set_config('{"order":[],"renames":{"home":"Старт"},"hidden":[]}')
-    assert_equal 'Старт', item('home').caption
+  test 'removing a rename restores the original caption (application_menu)' do
+    set_config('{"menus":{"application_menu":{"order":[],"renames":{"rsb_test_a":"Переименовано"},"hidden":[]}},"mui_nav":{}}')
+    assert_equal 'Переименовано', item('rsb_test_a', :application_menu).caption
 
-    set_config('{"order":[],"renames":{},"hidden":[]}')
-    assert_equal original, item('home').caption
+    set_config('{"menus":{"application_menu":{"order":[],"renames":{},"hidden":[]}},"mui_nav":{}}')
+    assert_equal 'Test A', item('rsb_test_a', :application_menu).caption
   end
 
   test 'items missing from order keep their relative order' do
@@ -62,8 +74,7 @@ class RedmineSidebarSettingsMenuApplierTest < ActiveSupport::TestCase
     set_config('{"order":["home"],"renames":{},"hidden":[]}')
     after = names
     assert_equal 'home', after.first
-    rest = after[1..]
-    assert_equal before.map(&:to_s) - ['home'], rest
+    assert_equal before.map(&:to_s) - ['home'], after[1..]
   end
 
   test 'broken stored config leaves the menu native' do
