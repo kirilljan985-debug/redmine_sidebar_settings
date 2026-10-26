@@ -19,7 +19,7 @@ module RedmineSidebarSettings
   # Fixed links of the ModernLayout side panel (top section), by stable path.
   MUI_NAV_ITEMS = [
     ['home', '/', 'rss_mui_home'],
-    ['my_page', '/my', 'rss_mui_my_page'],
+    ['my_page', '/my/page', 'rss_mui_my_page'],
     ['my_issues', '/issues', 'rss_mui_my_issues'],
     ['projects', '/projects', 'rss_mui_projects'],
     ['administration', '/admin', 'rss_mui_administration']

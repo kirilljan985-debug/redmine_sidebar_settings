@@ -27,7 +27,7 @@
 
   var PATHS = {
     home: '/',
-    my_page: '/my',
+    my_page: '/my/page',
     my_issues: '/issues',
     projects: '/projects',
     administration: '/admin'
