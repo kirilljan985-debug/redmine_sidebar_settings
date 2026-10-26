@@ -30,6 +30,10 @@ class SidebarSettingsController < ApplicationController
 
   # All managed areas with their items in the effective order: visible ones
   # as ordered by the config, then hidden ones kept by the stash.
+  #
+  # NB: never name a helper `menu_items` - ApplicationController includes
+  # MenuManager::MenuController, which defines a zero-argument `menu_items`
+  # that Redmine calls internally; overriding it breaks every render.
   def build_groups
     config = RedmineSidebarSettings.menu_config
     groups = []
@@ -37,7 +41,7 @@ class SidebarSettingsController < ApplicationController
       groups << {
         :key => menu,
         :title => l(:"rss_group_#{menu}"),
-        :items => menu_items(menu, config)
+        :items => menu_entries(menu, config)
       }
     end
     groups << {
@@ -48,7 +52,7 @@ class SidebarSettingsController < ApplicationController
     groups
   end
 
-  def menu_items(menu, config)
+  def menu_entries(menu, config)
     root = Redmine::MenuManager.map(menu).menu_items.root
     entries = root.children.map { |item| entry_for(item, false, menu) }
     RedmineSidebarSettings::MenuApplier.hidden_items(menu).each do |_name, item|
@@ -56,14 +60,14 @@ class SidebarSettingsController < ApplicationController
     end
 
     order_index = config['menus'][menu]['order'].each_with_index.to_h { |name, i| [name, i] }
-    entries.sort_by!.with_index { |entry, i| [order_index[entry[:name]] || Float::INFINITY, i] }
-    entries
+    entries.each_with_index.sort_by do |(entry, i)|
+      [order_index[entry[:name]] || Float::INFINITY, i]
+    end.map(&:first)
   end
 
   # ModernLayout's fixed links are hardcoded in its layout, so the editor
   # works with the known catalog instead of live menu items.
   def mui_items(config)
-    applier = RedmineSidebarSettings::MenuApplier
     part = config['mui_nav']
     order_index = part['order'].each_with_index.to_h { |name, i| [name, i] }
 
@@ -77,16 +81,16 @@ class SidebarSettingsController < ApplicationController
         :hidden => part['hidden'].include?(name)
       }
     end
-    entries.sort_by! { |entry| [order_index[entry[:name]] || Float::INFINITY, entries.index(entry)] }
-    entries
+    entries.each_with_index.sort_by do |(entry, i)|
+      [order_index[entry[:name]] || Float::INFINITY, i]
+    end.map(&:first)
   end
 
   def entry_for(item, hidden, menu)
-    applier = RedmineSidebarSettings::MenuApplier
     {
       :name => item.name.to_s,
       :caption => safe_caption(item),
-      :default_caption => applier.original_caption(menu, item),
+      :default_caption => RedmineSidebarSettings::MenuApplier.original_caption(menu, item),
       :url_hint => url_hint(item),
       :hidden => hidden
     }
