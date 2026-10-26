@@ -30,6 +30,18 @@
 
 ## Грабли (проверено)
 
+- **Нельзя называть методы контроллера `menu_items`** — ApplicationController
+  включает `MenuManager::MenuController`, у которого есть `menu_items` без
+  аргументов (Redmine вызывает его при отрисовке/подсветке меню); перекрытие
+  = `wrong number of arguments` → 500 на каждой отрисовке. Наш хелпер —
+  `menu_entries`. См. также `sort_by!.with_index {}` — блок достаётся
+  with_index, сортировка молча не выполняется.
+- ModernLayout (github.com/cerqueirav/redmine_modern_layout): левая панель —
+  `aside.mui-nav`; верхний блок зашит в layout буквально (управляется только
+  DOM-слоем mui_nav), секция «Рабочее пространство» рендерит
+  `:application_menu` / `:project_menu` через `menu_items_for` (наши серверные
+  правки доходят), список «ПРОЕКТЫ» — `Project.visible.limit(30)`, это не меню.
+
 - Zeitwerk (плагинный lib под eager load): путь файла = константа;
   `ValidationError` — в собственном файле `validation_error.rb`.
 - Партиалы хуков — имя файла с подчёркиванием (`_x.html.erb`), иначе
