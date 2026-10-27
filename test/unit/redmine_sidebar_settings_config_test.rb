@@ -13,7 +13,9 @@ class RedmineSidebarSettingsConfigTest < ActiveSupport::TestCase
     )
     assert_equal({'order' => ['issues'], 'renames' => {'issues' => 'Задачи'}, 'hidden' => [], 'custom' => []},
                  config['menus']['application_menu'])
-    assert_equal({'order' => [], 'renames' => {}, 'hidden' => ['projects'], 'custom' => []}, config['mui_nav'])
+    assert_equal({'order' => [], 'renames' => {}, 'hidden' => ['projects'],
+                  'custom' => [{'url' => '/projects/x/wiki/Info', 'title' => 'Инструкция'}]},
+                 config['mui_nav'])
   end
 
   test 'parse normalizes mui_nav custom links' do
