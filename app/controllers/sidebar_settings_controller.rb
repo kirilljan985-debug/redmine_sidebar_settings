@@ -84,8 +84,8 @@ class SidebarSettingsController < ApplicationController
         :hidden => part['hidden'].include?(name)
       }
     end
-    part['custom'].each_with_index do |entry, i|
-      entries << {:name => "custom_#{i + 1}", :custom => true,
+    part['custom'].each do |entry|
+      entries << {:name => entry['id'], :custom => true,
                   :caption => entry['title'],
                   :default_caption => '',
                   :url_hint => entry['url'],

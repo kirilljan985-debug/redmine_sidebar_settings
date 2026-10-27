@@ -82,7 +82,8 @@ module RedmineSidebarSettings
     end
 
     # {"order" => [names], "renames" => {name => caption}, "hidden" => [names],
-    #  "custom" => [{"url" => ..., "title" => ...}] (custom: mui_nav only)}
+    #  "custom" => [{"id" => ..., "url" => ..., "title" => ...}] (custom: mui_nav
+  #  only; order may reference custom ids too)}
     def normalize_part(value)
       return EMPTY_PART.dup if value.nil?
       return nil unless value.is_a?(Hash)
@@ -131,6 +132,7 @@ module RedmineSidebarSettings
       return nil unless value.is_a?(Array)
       return nil if value.size > MAX_CUSTOM
 
+      ids = []
       value.map do |entry|
         return nil unless entry.is_a?(Hash)
 
@@ -139,7 +141,13 @@ module RedmineSidebarSettings
         return nil unless url.match?(CUSTOM_URL_PATTERN) && url.length <= MAX_URL
         return nil if title.empty? || title.length > MAX_CAPTION
 
-        {'url' => url, 'title' => title}
+        # Stable id so the order can reference the link across edits.
+        id = entry['id'].to_s.strip
+        id = nil unless id.match?(NAME_PATTERN)
+        id = "c#{ids.size + 1}" if id.nil? || ids.include?(id)
+        id = "#{id}-#{ids.size + 1}" while ids.include?(id)
+        ids << id
+        {'id' => id, 'url' => url, 'title' => title}
       end
     end
   end

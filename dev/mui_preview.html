@@ -35,9 +35,13 @@
 </div>
 <script>
   window.RedmineSidebarSettingsMui = {
-    order: ["administration", "home", "my_issues", "my_page", "projects"],
+    order: ["administration", "home", "info", "my_issues", "my_page", "projects"],
     renames: {"home": "Главная", "my_issues": "Мои задачи"},
-    hidden: ["my_page"]
+    hidden: ["my_page"],
+    custom: [
+      {id: "info", url: "/projects/fregat/wiki/Инструкция", title: "Инструкция"},
+      {id: "scheme", url: "/work_scheme", title: "Схема"}
+    ]
   };
 </script>
 <script src="../assets/javascripts/sidebar_settings_mui.js?v=1"></script>

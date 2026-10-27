@@ -9,8 +9,8 @@
       <div id="rss-rows" class="rss-rows" data-menu="<%= group[:key] %>">
         <% group[:items].each do |item| %>
           <% if item[:custom] %>
-            <div class="rss-row rss-row-custom" data-custom="1">
-              <span class="rss-handle rss-handle-ghost">&#8285;&#8285;</span>
+            <div class="rss-row rss-row-custom" data-name="<%= item[:name] %>">
+              <span class="rss-handle" title="<%= l(:rss_drag_hint) %>">&#8285;&#8285;</span>
               <span class="rss-fields">
                 <input type="text" class="rss-custom-title" value="<%= item[:custom_title] %>"
                        placeholder="<%= l(:rss_custom_title) %>" aria-label="<%= l(:rss_custom_title) %>">

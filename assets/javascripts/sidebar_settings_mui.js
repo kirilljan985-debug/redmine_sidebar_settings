@@ -96,27 +96,20 @@
       if (a) { a.style.display = 'none'; appliedHidden += 1; }
     });
 
-    var order = (config.order || []).filter(function (name) { return link(name); });
-    if (order.length) {
-      var cursor = null;
-      order.forEach(function (name) {
-        var a = link(name);
-        if (cursor) { cursor.after(a); } else { section.prepend(a); }
-        cursor = a;
-      });
-    }
-
     var allNamed = Object.keys(renames).concat(hidden);
     var missing = allNamed.filter(function (name) { return !link(name); });
 
-    /* Admin-defined custom links, appended after the fixed ones. */
+    /* Admin-defined custom links (stable ids) are created first so they can
+       take part in the shared order together with the fixed links. */
     var customs = config.custom || [];
+    var customByName = {};
     customs.forEach(function (entry) {
-      if (!entry || !entry.url || !entry.title) { return; }
+      if (!entry || !entry.url || !entry.title || !entry.id) { return; }
       var a = document.createElement('a');
       a.className = 'mui-nav-link';
       a.href = entry.url;
       a.title = entry.title;
+      a.dataset.name = entry.id;
       a.setAttribute('data-rsb-custom', '1');
       a.innerHTML = CUSTOM_ICON;
       var label = document.createElement('span');
@@ -124,7 +117,22 @@
       label.textContent = entry.title;
       a.appendChild(label);
       section.appendChild(a);
+      customByName[entry.id] = a;
     });
+
+    function elementFor(name) {
+      return link(name) || customByName[name] || null;
+    }
+
+    var order = (config.order || []).filter(function (name) { return elementFor(name); });
+    if (order.length) {
+      var cursor = null;
+      order.forEach(function (name) {
+        var el = elementFor(name);
+        if (cursor) { cursor.after(el); } else { section.prepend(el); }
+        cursor = el;
+      });
+    }
 
     log('applied: renames ' + appliedRenames + '/' + Object.keys(renames).length +
         ', hidden ' + appliedHidden + '/' + hidden.length +

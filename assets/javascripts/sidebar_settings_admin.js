@@ -2,7 +2,8 @@
  * caption editing, hide/restore, and custom links for the ModernLayout
  * panel. Rows are rendered server-side in groups (data-menu per container);
  * JS reorders them and serializes the whole configuration into the JSON
- * field on save. */
+ * field on save. In the mui_nav group custom rows participate in the same
+ * order as the fixed items (each has a stable id in data-name). */
 (function () {
   'use strict';
 
@@ -11,7 +12,11 @@
   var containers = Array.prototype.slice.call(document.querySelectorAll('.rss-rows[data-menu]'));
   if (!form || !jsonEl || !containers.length) { return; }
 
-  function rows(container) {
+  function allRows(container) {
+    return Array.prototype.slice.call(container.querySelectorAll('.rss-row'));
+  }
+
+  function fixedRows(container) {
     return Array.prototype.slice.call(container.querySelectorAll('.rss-row:not(.rss-row-custom)'));
   }
 
@@ -25,22 +30,29 @@
     row.parentNode.insertBefore(row, delta < 0 ? sibling : sibling.nextElementSibling);
   }
 
-  function setPlaceholderInputs(row, title, url) {
-    row.querySelector('.rss-custom-title').placeholder = title;
-    row.querySelector('.rss-custom-url').placeholder = url;
-  }
-
   var addCustomButton = document.getElementById('rss-add-custom');
   var phTitle = addCustomButton ? addCustomButton.dataset.phTitle : '';
   var phUrl = addCustomButton ? addCustomButton.dataset.phUrl : '';
 
-  function buildCustomRow(title, url) {
+  /* Next free cN id within a container (fixed items use other names). */
+  function nextCustomId(container) {
+    var taken = {};
+    allRows(container).forEach(function (row) {
+      if (row.dataset.name) { taken[row.dataset.name] = true; }
+    });
+    var n = 1;
+    while (taken['c' + n]) { n += 1; }
+    return 'c' + n;
+  }
+
+  function buildCustomRow(id, title, url) {
     var row = document.createElement('div');
     row.className = 'rss-row rss-row-custom';
-    row.dataset.custom = '1';
+    row.dataset.name = id || '';
 
     var handle = document.createElement('span');
-    handle.className = 'rss-handle rss-handle-ghost';
+    handle.className = 'rss-handle';
+    handle.title = handleTitle;
     row.appendChild(handle);
 
     var fields = document.createElement('span');
@@ -67,7 +79,11 @@
     return row;
   }
 
+  var handleTitle = '';
   containers.forEach(function (container) {
+    var handle = container.querySelector('.rss-handle');
+    if (handle) { handleTitle = handle.title; }
+
     container.addEventListener('click', function (e) {
       var row = e.target.closest('.rss-row');
       if (!row) { return; }
@@ -126,31 +142,50 @@
   if (addCustomButton) {
     addCustomButton.addEventListener('click', function () {
       var muiContainer = document.querySelector('.rss-rows[data-menu=mui_nav]');
-      if (muiContainer) { muiContainer.appendChild(buildCustomRow('', '')); }
+      if (muiContainer) {
+        muiContainer.appendChild(buildCustomRow(nextCustomId(muiContainer), '', ''));
+      }
     });
   }
 
   function collectPart(container) {
-    var order = [], renames = {}, hidden = [];
-    rows(container).forEach(function (row) {
+    var part = {order: [], renames: {}, hidden: []};
+    var isMui = container.dataset.menu === 'mui_nav';
+
+    if (!isMui) {
+      fixedRows(container).forEach(function (row) {
+        var name = row.dataset.name;
+        var caption = row.querySelector('.rss-caption');
+        var value = caption.value.trim();
+        part.order.push(name);
+        if (value && value !== caption.getAttribute('data-default')) {
+          part.renames[name] = value;
+        }
+        if (row.querySelector('.rss-hidden').checked) { part.hidden.push(name); }
+      });
+      return part;
+    }
+
+    /* mui_nav: fixed items and custom links share one order. */
+    allRows(container).forEach(function (row) {
       var name = row.dataset.name;
+      if (!name) { return; }
+      part.order.push(name);
+      if (row.classList.contains('rss-row-custom')) { return; }
       var caption = row.querySelector('.rss-caption');
       var value = caption.value.trim();
-      order.push(name);
       if (value && value !== caption.getAttribute('data-default')) {
-        renames[name] = value;
+        part.renames[name] = value;
       }
-      if (row.querySelector('.rss-hidden').checked) { hidden.push(name); }
+      if (row.querySelector('.rss-hidden').checked) { part.hidden.push(name); }
     });
-    var part = {order: order, renames: renames, hidden: hidden};
-    if (container.dataset.menu === 'mui_nav') {
-      part.custom = customRows(container).map(function (row) {
-        return {
-          title: row.querySelector('.rss-custom-title').value.trim(),
-          url: row.querySelector('.rss-custom-url').value.trim()
-        };
-      }).filter(function (entry) { return entry.title && entry.url; });
-    }
+    part.custom = customRows(container).map(function (row) {
+      return {
+        id: row.dataset.name || nextCustomId(container),
+        title: row.querySelector('.rss-custom-title').value.trim(),
+        url: row.querySelector('.rss-custom-url').value.trim()
+      };
+    }).filter(function (entry) { return entry.title && entry.url; });
     return part;
   }
 
@@ -164,17 +199,39 @@
         menus[container.dataset.menu] = part;
       }
     });
-    jsonEl.value = JSON.stringify({menus: menus, mui_nav: muiNav || {order: [], renames: {}, hidden: [], custom: []}});
+    jsonEl.value = JSON.stringify({
+      menus: menus,
+      mui_nav: muiNav || {order: [], renames: {}, hidden: [], custom: []}
+    });
   });
 
   function applyPart(container, part) {
     part = part || {};
+    var isMui = container.dataset.menu === 'mui_nav';
     var byName = {};
-    rows(container).forEach(function (row) { byName[row.dataset.name] = row; });
-    (part.order || []).forEach(function (name) {
-      if (byName[name]) { container.appendChild(byName[name]); }
-    });
-    rows(container).forEach(function (row) {
+    fixedRows(container).forEach(function (row) { byName[row.dataset.name] = row; });
+
+    if (isMui) {
+      customRows(container).forEach(function (row) { row.remove(); });
+      (part.custom || []).forEach(function (entry) {
+        var row = buildCustomRow(entry.id, entry.title, entry.url);
+        container.appendChild(row);
+        byName[entry.id] = row;
+      });
+    }
+
+    /* One shared order for fixed items and custom links. */
+    var order = (part.order || []).filter(function (name) { return byName[name]; });
+    if (order.length) {
+      var cursor = null;
+      order.forEach(function (name) {
+        var row = byName[name];
+        if (cursor) { cursor.after(row); } else { container.prepend(row); }
+        cursor = row;
+      });
+    }
+
+    fixedRows(container).forEach(function (row) {
       var name = row.dataset.name;
       var caption = row.querySelector('.rss-caption');
       var renamed = part.renames && Object.prototype.hasOwnProperty.call(part.renames, name);
@@ -183,12 +240,6 @@
       row.querySelector('.rss-hidden').checked = isHidden;
       row.classList.toggle('rss-row-hidden', isHidden);
     });
-    if (container.dataset.menu === 'mui_nav') {
-      customRows(container).forEach(function (row) { row.remove(); });
-      (part.custom || []).forEach(function (entry) {
-        container.appendChild(buildCustomRow(entry.title, entry.url));
-      });
-    }
   }
 
   /* Keep the editor in sync when the JSON is edited directly. */
