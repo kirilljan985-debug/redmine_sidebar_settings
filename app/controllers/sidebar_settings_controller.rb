@@ -84,6 +84,15 @@ class SidebarSettingsController < ApplicationController
         :hidden => part['hidden'].include?(name)
       }
     end
+    part['custom'].each_with_index do |entry, i|
+      entries << {:name => "custom_#{i + 1}", :custom => true,
+                  :caption => entry['title'],
+                  :default_caption => '',
+                  :url_hint => entry['url'],
+                  :hidden => false,
+                  :custom_title => entry['title'],
+                  :custom_url => entry['url']}
+    end
     entries.each_with_index.sort_by do |(entry, i)|
       [order_index[entry[:name]] || Float::INFINITY, i]
     end.map(&:first)

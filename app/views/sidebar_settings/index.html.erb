@@ -8,27 +8,47 @@
       <p class="rss-hint"><%= group[:hint] %></p>
       <div id="rss-rows" class="rss-rows" data-menu="<%= group[:key] %>">
         <% group[:items].each do |item| %>
-          <div class="rss-row <%= 'rss-row-hidden' if item[:hidden] %>" data-name="<%= item[:name] %>">
-            <span class="rss-handle" title="<%= l(:rss_drag_hint) %>">&#8285;&#8285;</span>
-            <span class="rss-move">
-              <button type="button" class="rss-up" aria-label="<%= l(:rss_up) %>">&#8593;</button>
-              <button type="button" class="rss-down" aria-label="<%= l(:rss_down) %>">&#8595;</button>
-            </span>
-            <span class="rss-fields">
-              <input type="text" class="rss-caption"
-                     value="<%= item[:caption] %>"
-                     data-default="<%= item[:default_caption] %>"
-                     aria-label="<%= l(:rss_caption_label) %>">
-              <span class="rss-name"><%= item[:name] %></span>
-              <span class="rss-url"><%= item[:url_hint] %></span>
-            </span>
-            <label class="rss-hide-label">
-              <input type="checkbox" class="rss-hidden" <%= 'checked' if item[:hidden] %>>
-              <%= l(:rss_hidden_label) %>
-            </label>
-          </div>
+          <% if item[:custom] %>
+            <div class="rss-row rss-row-custom" data-custom="1">
+              <span class="rss-handle rss-handle-ghost">&#8285;&#8285;</span>
+              <span class="rss-fields">
+                <input type="text" class="rss-custom-title" value="<%= item[:custom_title] %>"
+                       placeholder="<%= l(:rss_custom_title) %>" aria-label="<%= l(:rss_custom_title) %>">
+                <input type="text" class="rss-custom-url" value="<%= item[:custom_url] %>"
+                       placeholder="<%= l(:rss_custom_url) %>" aria-label="<%= l(:rss_custom_url) %>">
+              </span>
+              <button type="button" class="rss-custom-del" aria-label="<%= l(:rss_remove) %>">&#10005;</button>
+            </div>
+          <% else %>
+            <div class="rss-row <%= 'rss-row-hidden' if item[:hidden] %>" data-name="<%= item[:name] %>">
+              <span class="rss-handle" title="<%= l(:rss_drag_hint) %>">&#8285;&#8285;</span>
+              <span class="rss-move">
+                <button type="button" class="rss-up" aria-label="<%= l(:rss_up) %>">&#8593;</button>
+                <button type="button" class="rss-down" aria-label="<%= l(:rss_down) %>">&#8595;</button>
+              </span>
+              <span class="rss-fields">
+                <input type="text" class="rss-caption"
+                       value="<%= item[:caption] %>"
+                       data-default="<%= item[:default_caption] %>"
+                       aria-label="<%= l(:rss_caption_label) %>">
+                <span class="rss-name"><%= item[:name] %></span>
+                <span class="rss-url"><%= item[:url_hint] %></span>
+              </span>
+              <label class="rss-hide-label">
+                <input type="checkbox" class="rss-hidden" <%= 'checked' if item[:hidden] %>>
+                <%= l(:rss_hidden_label) %>
+              </label>
+            </div>
+          <% end %>
         <% end %>
       </div>
+      <% if group[:key] == 'mui_nav' %>
+        <p>
+          <button type="button" id="rss-add-custom"
+                  data-ph-title="<%= l(:rss_custom_title) %>"
+                  data-ph-url="<%= l(:rss_custom_url) %>">+ <%= l(:rss_add_link) %></button>
+        </p>
+      <% end %>
     </div>
   <% end %>
 

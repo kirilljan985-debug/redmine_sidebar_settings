@@ -33,6 +33,12 @@
     administration: '/admin'
   };
 
+  /* Neutral dot icon in the style of the ModernLayout icon set. */
+  var CUSTOM_ICON = '<svg class="mui-icon mui-icon-dot" width="18" height="18" ' +
+    'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<circle cx="12" cy="12" r="3"/></svg>';
+
   function apply() {
     var config = window.RedmineSidebarSettingsMui;
     if (!config) {
@@ -102,9 +108,28 @@
 
     var allNamed = Object.keys(renames).concat(hidden);
     var missing = allNamed.filter(function (name) { return !link(name); });
+
+    /* Admin-defined custom links, appended after the fixed ones. */
+    var customs = config.custom || [];
+    customs.forEach(function (entry) {
+      if (!entry || !entry.url || !entry.title) { return; }
+      var a = document.createElement('a');
+      a.className = 'mui-nav-link';
+      a.href = entry.url;
+      a.title = entry.title;
+      a.setAttribute('data-rsb-custom', '1');
+      a.innerHTML = CUSTOM_ICON;
+      var label = document.createElement('span');
+      label.className = 'mui-label';
+      label.textContent = entry.title;
+      a.appendChild(label);
+      section.appendChild(a);
+    });
+
     log('applied: renames ' + appliedRenames + '/' + Object.keys(renames).length +
         ', hidden ' + appliedHidden + '/' + hidden.length +
         ', order ' + order.length +
+        ', custom ' + customs.length +
         (missing.length ? '; UNMATCHED: ' + missing.join(', ') : ''));
   }
 

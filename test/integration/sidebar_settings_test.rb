@@ -115,12 +115,24 @@ class SidebarSettingsIntegrationTest < Redmine::IntegrationTest
   end
 
   test 'mui_nav config is injected for the ModernLayout panel' do
-    set_config('{"menus":{},"mui_nav":{"order":[],"renames":{"home":"Главная"},"hidden":["projects"]}}')
+    set_config('{"menus":{},"mui_nav":{"order":[],"renames":{"home":"Главная"},"hidden":["projects"],' \
+               '"custom":[{"url":"/projects/fregat/wiki/Инструкция","title":"Инструкция"}]}}')
     get '/'
     assert_response :success
     assert_match %r{plugin_assets/redmine_sidebar_settings/sidebar_settings_mui[^"]*\.js}, response.body
     assert_match %r{window\.RedmineSidebarSettingsMui}, response.body
     assert_match %r{"hidden":\["projects"\]}, response.body
+    assert_match %r{Инструкция}, response.body
+  end
+
+  test 'editor shows saved custom links of the panel' do
+    set_config('{"menus":{},"mui_nav":{"order":[],"renames":{},"hidden":[],' \
+               '"custom":[{"url":"/projects/fregat/wiki/Инструкция","title":"Инструкция"}]}}')
+    log_user('admin', 'admin')
+    get '/sidebar_settings'
+    assert_response :success
+    assert_select 'div.rss-row-custom input.rss-custom-title[value="Инструкция"]'
+    assert_select 'div.rss-row-custom input.rss-custom-url[value="/projects/fregat/wiki/Инструкция"]'
   end
 
   test 'mui_nav config is not injected when empty' do

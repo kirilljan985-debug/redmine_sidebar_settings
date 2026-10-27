@@ -12,17 +12,23 @@ module RedmineSidebarSettings
   #     "application_menu": {...},
   #     "project_menu":     {...}
   #   },
-  #   "mui_nav": {...}  # fixed links of the ModernLayout side panel (DOM layer)
+  #   "mui_nav": {..., "custom" => [{"url" => "/...", "title" => "..."}]}
   # }
   # A legacy flat config (only the three keys) is treated as top_menu.
+  # mui_nav.custom adds the admin's own links to the fixed top block of the
+  # ModernLayout side panel (applied client-side).
   module Config
     NAME_PATTERN = /\A[\w-]+\z/
+    CUSTOM_URL_PATTERN = %r{\A(?:/|\w+://)\S*\z}
     MAX_ITEMS = 100
+    MAX_CUSTOM = 20
     MAX_CAPTION = 100
+    MAX_URL = 300
     MENUS = %w[top_menu application_menu project_menu].freeze
     SECTIONS = (MENUS + %w[mui_nav]).freeze
 
-    EMPTY_PART = {'order' => [].freeze, 'renames' => {}.freeze, 'hidden' => [].freeze}.freeze
+    EMPTY_PART = {'order' => [].freeze, 'renames' => {}.freeze,
+                  'hidden' => [].freeze, 'custom' => [].freeze}.freeze
     EMPTY = {'menus' => MENUS.each_with_object({}) { |m, h| h[m] = EMPTY_PART },
              'mui_nav' => EMPTY_PART}.freeze
 
@@ -75,7 +81,8 @@ module RedmineSidebarSettings
       {'menus' => menus, 'mui_nav' => mui}
     end
 
-    # {"order" => [names], "renames" => {name => caption}, "hidden" => [names]}
+    # {"order" => [names], "renames" => {name => caption}, "hidden" => [names],
+    #  "custom" => [{"url" => ..., "title" => ...}] (custom: mui_nav only)}
     def normalize_part(value)
       return EMPTY_PART.dup if value.nil?
       return nil unless value.is_a?(Hash)
@@ -83,9 +90,10 @@ module RedmineSidebarSettings
       order = normalize_names(value['order'])
       renames = normalize_renames(value['renames'])
       hidden = normalize_names(value['hidden'])
-      return nil if order.nil? || renames.nil? || hidden.nil?
+      custom = normalize_custom(value['custom'])
+      return nil if order.nil? || renames.nil? || hidden.nil? || custom.nil?
 
-      {'order' => order, 'renames' => renames, 'hidden' => hidden}
+      {'order' => order, 'renames' => renames, 'hidden' => hidden, 'custom' => custom}
     end
 
     def normalize_names(value)
@@ -116,6 +124,23 @@ module RedmineSidebarSettings
         renames[name] = caption
       end
       renames
+    end
+
+    def normalize_custom(value)
+      return [] if value.nil?
+      return nil unless value.is_a?(Array)
+      return nil if value.size > MAX_CUSTOM
+
+      value.map do |entry|
+        return nil unless entry.is_a?(Hash)
+
+        url = entry['url'].to_s.strip
+        title = entry['title'].to_s.strip
+        return nil unless url.match?(CUSTOM_URL_PATTERN) && url.length <= MAX_URL
+        return nil if title.empty? || title.length > MAX_CAPTION
+
+        {'url' => url, 'title' => title}
+      end
     end
   end
 end

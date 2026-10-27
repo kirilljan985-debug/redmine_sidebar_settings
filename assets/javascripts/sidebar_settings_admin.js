@@ -1,7 +1,8 @@
 /* redmine_sidebar_settings - menu editor: mouse drag-n-drop ordering,
- * caption editing, hide/restore. Rows are rendered server-side in groups
- * (data-menu per container); JS reorders them and serializes the whole
- * configuration into the JSON field on save. */
+ * caption editing, hide/restore, and custom links for the ModernLayout
+ * panel. Rows are rendered server-side in groups (data-menu per container);
+ * JS reorders them and serializes the whole configuration into the JSON
+ * field on save. */
 (function () {
   'use strict';
 
@@ -11,7 +12,11 @@
   if (!form || !jsonEl || !containers.length) { return; }
 
   function rows(container) {
-    return Array.prototype.slice.call(container.querySelectorAll('.rss-row'));
+    return Array.prototype.slice.call(container.querySelectorAll('.rss-row:not(.rss-row-custom)'));
+  }
+
+  function customRows(container) {
+    return Array.prototype.slice.call(container.querySelectorAll('.rss-row-custom'));
   }
 
   function moveRow(row, delta) {
@@ -20,12 +25,55 @@
     row.parentNode.insertBefore(row, delta < 0 ? sibling : sibling.nextElementSibling);
   }
 
+  function setPlaceholderInputs(row, title, url) {
+    row.querySelector('.rss-custom-title').placeholder = title;
+    row.querySelector('.rss-custom-url').placeholder = url;
+  }
+
+  var addCustomButton = document.getElementById('rss-add-custom');
+  var phTitle = addCustomButton ? addCustomButton.dataset.phTitle : '';
+  var phUrl = addCustomButton ? addCustomButton.dataset.phUrl : '';
+
+  function buildCustomRow(title, url) {
+    var row = document.createElement('div');
+    row.className = 'rss-row rss-row-custom';
+    row.dataset.custom = '1';
+
+    var handle = document.createElement('span');
+    handle.className = 'rss-handle rss-handle-ghost';
+    row.appendChild(handle);
+
+    var fields = document.createElement('span');
+    fields.className = 'rss-fields';
+    var titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.className = 'rss-custom-title';
+    titleInput.value = title || '';
+    titleInput.placeholder = phTitle;
+    var urlInput = document.createElement('input');
+    urlInput.type = 'text';
+    urlInput.className = 'rss-custom-url';
+    urlInput.value = url || '';
+    urlInput.placeholder = phUrl;
+    fields.appendChild(titleInput);
+    fields.appendChild(urlInput);
+    row.appendChild(fields);
+
+    var del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'rss-custom-del';
+    del.innerHTML = '&#10005;';
+    row.appendChild(del);
+    return row;
+  }
+
   containers.forEach(function (container) {
     container.addEventListener('click', function (e) {
       var row = e.target.closest('.rss-row');
       if (!row) { return; }
       if (e.target.classList.contains('rss-up')) { moveRow(row, -1); }
       if (e.target.classList.contains('rss-down')) { moveRow(row, 1); }
+      if (e.target.classList.contains('rss-custom-del')) { row.remove(); }
     });
 
     /* Rows are draggable only while dragging starts from the handle:
@@ -75,6 +123,13 @@
     });
   });
 
+  if (addCustomButton) {
+    addCustomButton.addEventListener('click', function () {
+      var muiContainer = document.querySelector('.rss-rows[data-menu=mui_nav]');
+      if (muiContainer) { muiContainer.appendChild(buildCustomRow('', '')); }
+    });
+  }
+
   function collectPart(container) {
     var order = [], renames = {}, hidden = [];
     rows(container).forEach(function (row) {
@@ -87,10 +142,19 @@
       }
       if (row.querySelector('.rss-hidden').checked) { hidden.push(name); }
     });
-    return {order: order, renames: renames, hidden: hidden};
+    var part = {order: order, renames: renames, hidden: hidden};
+    if (container.dataset.menu === 'mui_nav') {
+      part.custom = customRows(container).map(function (row) {
+        return {
+          title: row.querySelector('.rss-custom-title').value.trim(),
+          url: row.querySelector('.rss-custom-url').value.trim()
+        };
+      }).filter(function (entry) { return entry.title && entry.url; });
+    }
+    return part;
   }
 
-  function collect() {
+  form.addEventListener('submit', function () {
     var menus = {}, muiNav = null;
     containers.forEach(function (container) {
       var part = collectPart(container);
@@ -100,11 +164,7 @@
         menus[container.dataset.menu] = part;
       }
     });
-    return {menus: menus, mui_nav: muiNav || {order: [], renames: {}, hidden: []}};
-  }
-
-  form.addEventListener('submit', function () {
-    jsonEl.value = JSON.stringify(collect());
+    jsonEl.value = JSON.stringify({menus: menus, mui_nav: muiNav || {order: [], renames: {}, hidden: [], custom: []}});
   });
 
   function applyPart(container, part) {
@@ -123,6 +183,12 @@
       row.querySelector('.rss-hidden').checked = isHidden;
       row.classList.toggle('rss-row-hidden', isHidden);
     });
+    if (container.dataset.menu === 'mui_nav') {
+      customRows(container).forEach(function (row) { row.remove(); });
+      (part.custom || []).forEach(function (entry) {
+        container.appendChild(buildCustomRow(entry.title, entry.url));
+      });
+    }
   }
 
   /* Keep the editor in sync when the JSON is edited directly. */
