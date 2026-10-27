@@ -14,7 +14,7 @@ class RedmineSidebarSettingsConfigTest < ActiveSupport::TestCase
     assert_equal({'order' => ['issues'], 'renames' => {'issues' => 'Задачи'}, 'hidden' => [], 'custom' => []},
                  config['menus']['application_menu'])
     assert_equal({'order' => [], 'renames' => {}, 'hidden' => ['projects'],
-                  'custom' => [{'url' => '/projects/x/wiki/Info', 'title' => 'Инструкция'}]},
+                  'custom' => [{'id' => 'c1', 'url' => '/projects/x/wiki/Info', 'title' => 'Инструкция'}]},
                  config['mui_nav'])
   end
 
@@ -24,8 +24,9 @@ class RedmineSidebarSettingsConfigTest < ActiveSupport::TestCase
       '{"url":"https://example.com","title":"Внешняя"}]}}'
     )
     assert_equal 2, config['mui_nav']['custom'].size
-    assert_equal({'url' => '/projects/fregat/wiki/Инструкция', 'title' => 'Инструкция'},
+    assert_equal({'id' => 'c1', 'url' => '/projects/fregat/wiki/Инструкция', 'title' => 'Инструкция'},
                  config['mui_nav']['custom'].first)
+    assert_equal('c2', config['mui_nav']['custom'].second['id'])
   end
 
   test 'parse rejects custom links without url or title' do
