@@ -20,3 +20,41 @@
 .rss-json-details textarea { width: 99%; font-family: ui-monospace, Consolas, monospace; }
 .rss-hint { font-size: 0.9em; color: #666; }
 
+html[data-mui-theme="dark"] #rss-form .rss-row {
+  background: var(--mui-surface-2);
+  border-color: var(--mui-border-strong);
+}
+
+html[data-mui-theme="dark"] #rss-form .rss-row-hidden {
+  background: var(--mui-surface);
+  opacity: 1;
+}
+
+html[data-mui-theme="dark"] #rss-form .rss-row[draggable="true"] {
+  border-color: var(--mui-accent);
+  background: var(--mui-hover);
+}
+
+html[data-mui-theme="dark"] #rss-form .rss-name {
+  color: var(--mui-text-2);
+}
+
+html[data-mui-theme="dark"] #rss-form :is(.rss-handle, .rss-url, .rss-hint) {
+  color: var(--mui-muted);
+}
+
+html[data-mui-theme="dark"] #rss-form button {
+  background: var(--mui-surface);
+  border-color: var(--mui-border-strong);
+  color: var(--mui-text);
+}
+
+html[data-mui-theme="dark"] #rss-form button:hover:not(:disabled) {
+  background: var(--mui-hover);
+}
+
+html[data-mui-theme="dark"] #rss-form :is(button, input, textarea, summary):focus-visible {
+  outline: 2px solid var(--mui-accent);
+  outline-offset: 2px;
+}
+
